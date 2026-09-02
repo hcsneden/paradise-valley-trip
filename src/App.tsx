@@ -1,253 +1,135 @@
-import { Badge, Card, CardContent, CardHeader, Divider, Typography } from '@hcsneden/design-library'
-import { Hero } from './components/Hero'
-import { Section } from './components/Section'
-import { StaySection } from './components/StaySection'
-import { TripMap } from './components/TripMap'
-import { expenses, itinerary, openThreads, parties, places } from './data/trip'
+import { useEffect, useState } from 'react'
+import { Header } from './components/Header'
+import { TabBar, type Tab } from './components/TabBar'
+import { DaysTab } from './components/DaysTab'
+import { MapTab } from './components/MapTab'
+import { HouseTab } from './components/HouseTab'
+import { MoneyTab } from './components/MoneyTab'
+import {
+  addExpense,
+  addPin,
+  addSuggestion,
+  isSheetConfigured,
+  loadState,
+  removeExpense,
+  removePin,
+  seedState,
+  USER_KEY,
+  voteSuggestion,
+  type Expense,
+  type Pin,
+  type TripState,
+} from './lib/store'
 
-const money = (value: number) =>
-  value.toLocaleString('en-US', { style: 'currency', currency: 'USD' })
+const VOTED_KEY = 'pv-trip-voted'
 
-const restaurants = places.filter((place) => place.kind === 'food')
-const supplies = places.filter((place) => place.kind === 'supplies')
-const activities = places.filter((place) => place.kind === 'activity')
-const nearby = activities.filter((place) => !place.inPark)
-const yellowstone = activities.filter((place) => place.inPark)
+const readStored = (key: string, fallback: string) => {
+  try {
+    return localStorage.getItem(key) ?? fallback
+  } catch {
+    return fallback
+  }
+}
 
-const airbnbTotal = expenses[0].total ?? 0
+export const App = () => {
+  const [tab, setTab] = useState<Tab>('days')
+  const [state, setState] = useState<TripState>(seedState)
+  const [user, setUser] = useState(() => readStored(USER_KEY, ''))
+  const [voted, setVoted] = useState<Record<string, boolean>>(() => {
+    try {
+      return JSON.parse(readStored(VOTED_KEY, '{}'))
+    } catch {
+      return {}
+    }
+  })
+  const [error, setError] = useState<string | null>(null)
 
-export const App = () => (
-  <>
-    <Hero />
+  useEffect(() => {
+    loadState()
+      .then(setState)
+      .catch(() => setError('Could not reach the trip sheet. Showing what is saved on this device.'))
+  }, [])
 
-    <Section
-      id="itinerary"
-      index="01"
-      title="The plan"
-      intro="A loose shape for the four days, not a schedule. The open questions under each day are the ones still worth settling before we fly."
-    >
-      <div className="grid cols-2">
-        {itinerary.map((day) => (
-          <Card key={day.day} shadow>
-            <CardHeader title={`${day.day}, ${day.date}`} subtitle={day.anchor} />
-            <CardContent>
-              <ul style={{ margin: 0, paddingLeft: 20, display: 'grid', gap: 8 }}>
-                {day.items.map((item) => (
-                  <li key={item} style={{ fontSize: 15, lineHeight: 1.6 }}>
-                    {item}
-                  </li>
-                ))}
-              </ul>
-              {day.openQuestions?.map((question) => (
-                <div key={question} style={{ marginTop: 16 }}>
-                  <Divider />
-                  <div style={{ marginTop: 14 }}>
-                    <span className="eyebrow" style={{ color: 'var(--dl-color-warning)' }}>
-                      Open question
-                    </span>
-                    <Typography variant="body" className="fs-sm mt-xs">
-                      {question}
-                    </Typography>
-                  </div>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    </Section>
+  useEffect(() => {
+    try {
+      localStorage.setItem(USER_KEY, user)
+    } catch {
+      return
+    }
+  }, [user])
 
-    <StaySection />
+  const run = (work: Promise<TripState>) => {
+    work.then(setState).catch((err: Error) => setError(err.message))
+  }
 
-    <Section
-      id="map"
-      index="03"
-      title="The map"
-      intro="Everything from the planning sheet, pinned. Click anywhere to add your own hike, fishing hole or anything else you find."
-    >
-      <TripMap />
-    </Section>
+  const markVoted = (id: string) => {
+    const next = { ...voted, [id]: true }
+    setVoted(next)
+    try {
+      localStorage.setItem(VOTED_KEY, JSON.stringify(next))
+    } catch {
+      return
+    }
+  }
 
-    <Section
-      id="eat"
-      index="04"
-      title="Eat and supply"
-      intro="Everything here is within about 15 minutes of the house. Anything bigger than the Emigrant general store means a drive to Livingston or Bozeman."
-    >
-      <div className="grid cols-3">
-        {[...restaurants, ...supplies].map((place) => (
-          <Card key={place.id} shadow>
-            <CardHeader title={place.name} subtitle={place.meals ?? 'Gas & groceries'} />
-            <CardContent>
-              <div className="row" style={{ marginBottom: 12 }}>
-                {place.price && <Badge variant="subtle">{place.price}</Badge>}
-                {place.driveFromHouse && <Badge variant="outline">{place.driveFromHouse}</Badge>}
-              </div>
-              {place.notes && (
-                <Typography variant="body" className="fs-sm mb-sm">
-                  {place.notes}
-                </Typography>
-              )}
-              {(place.link || place.mapsLink) && (
-                <a
-                  href={place.link ?? place.mapsLink}
-                  target="_blank"
-                  rel="noreferrer"
-                  style={{ fontSize: 14, fontWeight: 500 }}
-                >
-                  Look it up →
-                </a>
-              )}
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    </Section>
+  return (
+    <div className="app">
+      <Header user={user} onUser={setUser} />
 
-    <Section
-      id="do"
-      index="05"
-      title="Things to do"
-      intro="Split by drive time, because that is the real decision. The close list is a lazy morning. The Yellowstone list is a whole day in the car."
-    >
-      <span className="eyebrow">Close to the house</span>
-      <div className="grid cols-3" style={{ marginTop: 16, marginBottom: 44 }}>
-        {nearby.map((place) => (
-          <Card key={place.id} shadow>
-            <CardHeader title={place.name} subtitle={place.driveFromHouse} />
-            <CardContent>
-              {place.price && (
-                <Badge variant="subtle" >{place.price}</Badge>
-              )}
-              {place.notes && (
-                <Typography variant="body" className="fs-sm mt-sm">
-                  {place.notes}
-                </Typography>
-              )}
-              {place.link && (
-                <div style={{ marginTop: 12 }}>
-                  <a href={place.link} target="_blank" rel="noreferrer" style={{ fontSize: 14, fontWeight: 500 }}>
-                    Look it up →
-                  </a>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      <span className="eyebrow">Yellowstone, if we commit the day</span>
-      <div className="panel" style={{ marginTop: 16 }}>
-        <div className="table-scroll">
-          <table className="data">
-            <thead>
-              <tr>
-                <th>Stop</th>
-                <th>Drive from house</th>
-                <th>Notes</th>
-              </tr>
-            </thead>
-            <tbody>
-              {yellowstone.map((place) => (
-                <tr key={place.id}>
-                  <td style={{ fontWeight: 600 }}>{place.name}</td>
-                  <td className="mono">{place.driveFromHouse}</td>
-                  <td style={{ color: 'var(--dl-color-muted)' }}>{place.notes}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      {error && (
+        <div className="section-pad" style={{ paddingBottom: 0 }}>
+          <p className="sync-note">{error}</p>
         </div>
-      </div>
-    </Section>
+      )}
 
-    <Section id="logistics" index="06" title="Logistics">
-      <div className="grid cols-2">
-        <div className="panel">
-          <Typography variant="h4" className="mb-md">
-            Arrivals and departures
-          </Typography>
-          <div className="table-scroll">
-            <table className="data">
-              <thead>
-                <tr>
-                  <th>Party</th>
-                  <th>Boots on the ground, BZN</th>
-                  <th>Depart</th>
-                </tr>
-              </thead>
-              <tbody>
-                {parties.map((party) => (
-                  <tr key={party.name}>
-                    <td style={{ fontWeight: 600 }}>{party.name}</td>
-                    <td>{party.arrive}</td>
-                    <td>{party.depart}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+      {!isSheetConfigured() && !error && (
+        <div className="section-pad" style={{ paddingBottom: 0 }}>
+          <p className="sync-note">
+            Not connected to the trip sheet yet, so ideas, votes, pins and expenses save on this device
+            only. Nobody else sees them until it is hooked up.
+          </p>
         </div>
+      )}
 
-        <div className="panel">
-          <Typography variant="h4" className="mb-md">
-            Money
-          </Typography>
-          <div className="table-scroll">
-            <table className="data">
-              <thead>
-                <tr>
-                  <th>Item</th>
-                  <th style={{ textAlign: 'right' }}>Per party</th>
-                  <th style={{ textAlign: 'right' }}>Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                {expenses.map((expense) => (
-                  <tr key={expense.label}>
-                    <td style={{ fontWeight: 600 }}>{expense.label}</td>
-                    <td className="num">{expense.perParty ? money(expense.perParty) : 'TBD'}</td>
-                    <td className="num">{expense.total ? money(expense.total) : 'TBD'}</td>
-                  </tr>
-                ))}
-                <tr>
-                  <td style={{ fontWeight: 600 }}>Settled so far</td>
-                  <td className="num" style={{ fontWeight: 600 }}>{money(airbnbTotal / 4)}</td>
-                  <td className="num" style={{ fontWeight: 600 }}>{money(airbnbTotal)}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-          <Typography variant="caption" muted className="block mt-sm">
-            Split four ways. Van, groceries and booze are still unpriced.
-          </Typography>
-        </div>
+      <div style={{ display: tab === 'days' ? 'block' : 'none' }}>
+        <DaysTab
+          state={state}
+          user={user}
+          voted={voted}
+          onAdd={(dayId, text) =>
+            run(addSuggestion(state, { dayId, text, by: user.trim() || 'anonymous' }))
+          }
+          onVote={(id) => {
+            if (voted[id]) return
+            markVoted(id)
+            run(voteSuggestion(state, id))
+          }}
+        />
       </div>
 
-      <div className="panel" style={{ marginTop: 20 }}>
-        <Typography variant="h4" className="mb-xs">
-          Open questions
-        </Typography>
-        <Typography variant="body" muted className="fs-sm mb-lg">
-          Pulled straight out of the comments in the planning sheet.
-        </Typography>
-        <ul style={{ margin: 0, paddingLeft: 20, display: 'grid', gap: 10 }}>
-          {openThreads.map((thread) => (
-            <li key={thread} style={{ fontSize: 15, lineHeight: 1.6 }}>
-              {thread}
-            </li>
-          ))}
-        </ul>
+      <div style={{ display: tab === 'map' ? 'block' : 'none' }}>
+        <MapTab
+          state={state}
+          user={user}
+          visible={tab === 'map'}
+          onAdd={(pin: Omit<Pin, 'id'>) => run(addPin(state, pin))}
+          onRemove={(id) => run(removePin(state, id))}
+        />
       </div>
 
-    </Section>
+      <div style={{ display: tab === 'house' ? 'block' : 'none' }}>
+        <HouseTab />
+      </div>
 
-    <footer className="shell" style={{ padding: '40px 24px 64px' }}>
-      <Divider />
-      <Typography variant="caption" muted className="block mt-md">
-        Built from the group planning spreadsheet. Coordinates verified against OpenStreetMap.
-        Anything that changes in the sheet needs to be updated here too.
-      </Typography>
-    </footer>
-  </>
-)
+      <div style={{ display: tab === 'money' ? 'block' : 'none' }}>
+        <MoneyTab
+          state={state}
+          onAdd={(expense: Omit<Expense, 'id'>) => run(addExpense(state, expense))}
+          onRemove={(id) => run(removeExpense(state, id))}
+        />
+      </div>
+
+      <TabBar tab={tab} onTab={setTab} />
+    </div>
+  )
+}

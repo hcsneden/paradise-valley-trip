@@ -1,31 +1,14 @@
-export type PlaceKind = 'lodging' | 'food' | 'activity' | 'supplies' | 'travel'
-
-export interface Place {
-  id: string
-  name: string
-  kind: PlaceKind
-  lat: number
-  lng: number
-  driveFromHouse?: string
-  price?: string
-  link?: string
-  mapsLink?: string
-  meals?: string
-  inPark?: boolean
-  notes?: string
-}
-
 export const trip = {
-  name: 'Paradise Valley',
-  subtitle: 'Livingston, Montana',
-  arrive: 'Thursday, October 15, 2026',
-  depart: 'Sunday, October 18, 2026',
-  checkIn: 'Check-in after 4:00 PM Thursday',
-  checkOut: 'Checkout by 10:00 AM Sunday',
+  eyebrow: 'Paradise Valley, MT',
+  title: 'Big sky, small plans.',
+  subline: 'Oct 15–18 · 3 nights · 4 families · a house on the Yellowstone',
+  startsOn: '2026-10-15',
   address: '17 Appaloosa Circle, Livingston, MT 59047',
   guidebook: 'https://www.airbnb.com/s/guidebooks?refinement_paths[]=/guidebooks/6234225',
   hostNote:
-    'The area is very rural. Stop for supplies in Bozeman or Livingston before heading out to the house. Basic essentials are already there: coffee, tea, oil, flour, sugar and spices. A small grocery store and gas station is about 15 minutes away in Emigrant.',
+    'The valley is rural. Do the real shop in Bozeman or Livingston before you head out. The house already has coffee, tea, oil, flour, sugar and spices. Closest gas and milk is the general store in Emigrant, fifteen minutes off.',
+  weatherNote:
+    'Mid-October in the valley runs 55°F in the afternoon and drops near freezing after dark. The sun goes behind the ridge before 7. Bring a puffy, a hat, and boots you do not mind soaking.',
 }
 
 export interface Listing {
@@ -33,10 +16,10 @@ export interface Listing {
   location: string
   url: string
   images: string[]
-  guests: number | null
-  bedrooms: number | null
-  beds: number | null
-  bathrooms: number | string | null
+  guests: number
+  bedrooms: number
+  beds: number
+  bathrooms: number
 }
 
 export const listing: Listing = {
@@ -52,10 +35,6 @@ export const listing: Listing = {
     'https://a0.muscache.com/im/pictures/prohost-api/Hosting-968919791124925451/original/03648d88-5622-480d-9964-fed0887ea57e.jpeg?im_w=1200',
     'https://a0.muscache.com/im/pictures/prohost-api/Hosting-968919791124925451/original/f600d14b-cb0c-468c-9210-8615d4b24966.jpeg?im_w=1200',
     'https://a0.muscache.com/im/pictures/prohost-api/Hosting-968919791124925451/original/725b5919-f000-4df2-bc4a-8c6c4505dec5.jpeg?im_w=1200',
-    'https://a0.muscache.com/im/pictures/prohost-api/Hosting-968919791124925451/original/d2171f26-f89d-4a78-9550-6cc73ca1745e.jpeg?im_w=1200',
-    'https://a0.muscache.com/im/pictures/prohost-api/Hosting-968919791124925451/original/9de17bac-7817-41b7-8e19-c4153964f38c.jpeg?im_w=1200',
-    'https://a0.muscache.com/im/pictures/prohost-api/Hosting-968919791124925451/original/ae37d1de-109e-4ed9-9766-c4fa69937faf.jpeg?im_w=1200',
-    'https://a0.muscache.com/im/pictures/prohost-api/Hosting-968919791124925451/original/4bf21660-7041-4461-983d-e7e289a76489.jpeg?im_w=1200',
   ],
   guests: 12,
   bedrooms: 4,
@@ -63,209 +42,189 @@ export const listing: Listing = {
   bathrooms: 4,
 }
 
-export const places: Place[] = [
-  {
-    id: 'house',
-    name: 'The House',
-    kind: 'lodging',
-    lat: 45.4067679,
-    lng: -110.691467,
-    notes: '17 Appaloosa Circle, Livingston, MT 59047',
-  },
-  {
-    id: 'bzn',
-    name: 'Bozeman Yellowstone Airport (BZN)',
-    kind: 'travel',
-    lat: 45.783499,
-    lng: -111.156982,
-    driveFromHouse: '~1 hr',
-    notes: 'Everyone flies in and out of here.',
-  },
-  {
-    id: 'sage',
-    name: 'Sage Lodge',
-    kind: 'food',
-    meals: 'Dinner',
-    price: '$$$',
-    lat: 45.355057,
-    lng: -110.727003,
-    driveFromHouse: '12 min',
-    link: 'https://www.airbnb.com/things-to-do/places/t-g-ChIJKbf1uMPtT1MRpVZyNe9zpWo',
-    notes: 'Indoor dining room, a bar area and an outdoor patio.',
-  },
-  {
-    id: 'old-saloon',
-    name: 'The Old Saloon',
-    kind: 'food',
-    meals: 'Lunch / Dinner',
-    price: '$',
-    lat: 45.369276,
-    lng: -110.734104,
-    driveFromHouse: '12 min',
-    link: 'https://www.google.com/search?q=the+old+saloon+emigrant+montana',
-  },
-  {
-    id: 'follow-yer-nose',
-    name: 'Follow Yer Nose BBQ',
-    kind: 'food',
-    meals: 'Lunch / Dinner',
-    price: '$',
-    lat: 45.369501,
-    lng: -110.73492,
-    driveFromHouse: '12 min',
-    link: 'https://www.google.com/search?q=follow+your+nose+bbq+gardiner+mt',
-    notes:
-      'Live music and outdoor seating. Takes large pickup orders for under 30 people. They also run a food wagon at the entrance to Yellowstone.',
-  },
-  {
-    id: 'emigrant-store',
-    name: 'Emigrant General Store & Sinclair',
-    kind: 'supplies',
-    lat: 45.3687301,
-    lng: -110.7321775,
-    driveFromHouse: '15 min',
-    mapsLink: 'https://www.google.com/maps/place/Emigrant+General+Store/@45.36873,-110.7326369,20z',
-    notes: 'Closest gas and general store. Anything bigger means driving to Livingston.',
-  },
-  {
-    id: 'chicory',
-    name: 'REAL Chicory Fishing Access',
-    kind: 'activity',
-    lat: 45.3975972,
-    lng: -110.7021588,
-    driveFromHouse: '1 mile',
-    price: 'Temporary fishing license required',
-    link: 'https://myfwp.mt.gov/fishMT/fas/39753510',
-    notes: 'Fly fishing access on the Yellowstone, essentially walking distance from the house.',
-  },
-  {
-    id: 'chico',
-    name: 'Chico Hot Springs',
-    kind: 'activity',
-    lat: 45.337714,
-    lng: -110.692156,
-    driveFromHouse: '12 min',
-    price: '$14 per person',
-    link: 'https://www.chicohotsprings.com/soak',
-    mapsLink: 'https://maps.app.goo.gl/qGobDnFmCKme8xpt5',
-  },
-  {
-    id: 'pine-creek',
-    name: 'Pine Creek Falls',
-    kind: 'activity',
-    lat: 45.4885737,
-    lng: -110.5007518,
-    driveFromHouse: '24 min',
-    link: 'https://www.google.com/search?q=pine+creek+waterfall+montana',
-    notes: 'Family friendly hike to a waterfall. 1.2 miles up to 10 miles depending on preference.',
-  },
-  {
-    id: 'grizzly',
-    name: 'Montana Grizzly Encounter',
-    kind: 'activity',
-    lat: 45.663969,
-    lng: -110.834041,
-    driveFromHouse: '35 min',
-    price: '$13.50, kids free',
-    link: 'https://www.grizzlyencounter.org/',
-    mapsLink: 'https://maps.app.goo.gl/BN3CQiY6x1ezduZcA',
-    notes: 'Between Bozeman and Livingston, so it works as a stop on the drive in from the airport.',
-  },
-  {
-    id: 'oktoberfest',
-    name: '2nd Street Oktoberfest, Livingston',
-    kind: 'activity',
-    lat: 45.662387,
-    lng: -110.56159,
-    driveFromHouse: '25 min',
-    price: 'Saturday Oct 17, 4-7 PM',
-    link: 'https://www.explorelivingstonmt.com/oktoberfest',
-    notes: 'Open question from the sheet: do we secretly sign the men up for the stein competition?',
-  },
-  {
-    id: 'old-faithful',
-    inPark: true,
-    name: 'Old Faithful',
-    kind: 'activity',
-    lat: 44.459626,
-    lng: -110.831287,
-    driveFromHouse: '2 hr 30 min',
-    notes: 'The farthest point into the park. Do this first if you go.',
-  },
-  {
-    id: 'midway-geyser',
-    inPark: true,
-    name: 'Midway Geyser Basin',
-    kind: 'activity',
-    lat: 44.525918,
-    lng: -110.837603,
-    driveFromHouse: '2 hr 20 min',
-    notes: 'About 10 minutes before Old Faithful on the way in.',
-  },
-  {
-    id: 'mammoth',
-    inPark: true,
-    name: 'Mammoth Hot Springs',
-    kind: 'activity',
-    lat: 44.962395,
-    lng: -110.714357,
-    driveFromHouse: '1 hr',
-    notes: 'North end of the park and the closest Yellowstone stop to the house.',
-  },
-]
-
-export interface ItineraryDay {
-  day: string
-  date: string
-  anchor?: string
-  items: string[]
-  openQuestions?: string[]
+export const stay = {
+  checkIn: 'Thu, after 4:00 pm',
+  checkOut: 'Sun, by 10:00 am',
 }
 
-export const itinerary: ItineraryDay[] = [
+export interface DriveTime {
+  label: string
+  value: string
+}
+
+export const driveTimes: DriveTime[] = [
+  { label: 'Chicory fishing access', value: '1 mile' },
+  { label: 'Chico Hot Springs', value: '12 min' },
+  { label: 'Emigrant general store', value: '15 min' },
+  { label: 'Pine Creek Falls', value: '24 min' },
+  { label: 'Livingston', value: '25 min' },
+  { label: 'Grizzly Encounter', value: '35 min' },
+  { label: 'Bozeman airport', value: '1 hr' },
+  { label: 'Mammoth Hot Springs', value: '1 hr' },
+  { label: 'Old Faithful', value: '2 hr 30' },
+]
+
+export interface ItineraryItem {
+  time: string
+  title: string
+  detail: string
+  tag?: string
+  tagTone?: 'water' | 'trail' | 'booking'
+}
+
+export interface Day {
+  id: number
+  dow: string
+  num: string
+  title: string
+  note: string
+  items: ItineraryItem[]
+}
+
+export const days: Day[] = [
   {
-    day: 'Thursday',
-    date: 'October 15',
-    anchor: 'Check-in after 4:00 PM',
+    id: 1,
+    dow: 'THU',
+    num: '15',
+    title: 'Land, provision, soak',
+    note: 'Nobody plans anything ambitious today.',
     items: [
-      'Everyone flies into Bozeman, arrivals between 12:30 and 1:20 PM',
-      'Grab pickup grocery orders or arrange delivery',
-      'Montana Grizzly Encounter on the way to the house',
-      'Settle in at the house. Bonfire and hot tub.',
+      {
+        time: '12:30 pm',
+        title: 'Wheels down at BZN',
+        detail:
+          'Nat and Liv & Joe land at 12:30, Jord at 1:20. Han and Mal are already in from the weekend. First ones down grab coffee and wait it out.',
+      },
+      {
+        time: '2:00 pm',
+        title: 'The big shop',
+        detail:
+          'Last real store before the valley. Four days of food, firewood, unreasonable breakfast meat. Worth doing a Walmart or Costco pickup order so it is bagged and waiting.',
+        tag: 'someone order ahead',
+        tagTone: 'booking',
+      },
+      {
+        time: '3:00 pm',
+        title: 'Grizzly Encounter on the way',
+        detail:
+          'Sits between Bozeman and Livingston, so it costs you nothing but the stop. $13.50 a head and the kids are free.',
+      },
+      {
+        time: '4:00 pm',
+        title: 'Check in at the house',
+        detail:
+          'Bedroom draw happens on the porch, not over text. Four bedrooms, seven beds, four baths. Hot tub on immediately.',
+      },
+      {
+        time: '7:00 pm',
+        title: 'Fire pit and an early night',
+        detail:
+          'Everyone has been travelling with kids since dawn. Cook in, sit outside, go to bed.',
+      },
     ],
   },
   {
-    day: 'Friday',
-    date: 'October 16',
-    anchor: 'Yellowstone day, or a local day',
+    id: 2,
+    dow: 'FRI',
+    num: '16',
+    title: 'Park day, or valley day',
+    note: 'The one real decision of the trip. Vote below.',
     items: [
-      'Up early to get into the park',
-      'Old Faithful first since it is farthest, then Midway Geyser Basin, then Mammoth Hot Springs on the way back',
-      'Dinner on the drive back or cook at the house',
-    ],
-    openQuestions: [
-      'Five to six hours in the car is a lot for a short trip, especially with the kids. The alternative is a local day: fly fishing, rock hunting and exploring close to the house.',
+      {
+        time: '6:30 am',
+        title: 'If we commit: roll out early',
+        detail:
+          'Old Faithful is 2 hr 30 each way, so it goes first. Midway Geyser Basin is ten minutes back up the road, then Mammoth on the way home. Thermoses, not a sit-down breakfast.',
+        tag: '5–6 hrs driving',
+        tagTone: 'booking',
+      },
+      {
+        time: '9:00 am',
+        title: 'If we do not: fish the Yellowstone',
+        detail:
+          'Chicory access is a mile from the front door. Temporary licences online the night before. Rock hunting for anyone not holding a rod.',
+        tag: 'licence needed',
+        tagTone: 'water',
+      },
+      {
+        time: '11:00 am',
+        title: 'Or split the difference at Mammoth',
+        detail:
+          'North end of the park, an hour out. You get Yellowstone without losing the whole day to the car.',
+        tag: 'easy compromise',
+        tagTone: 'trail',
+      },
+      {
+        time: '6:30 pm',
+        title: 'Dinner wherever we land',
+        detail:
+          'Cook at the house if it was a long day. The Old Saloon is twelve minutes off if nobody has the energy.',
+      },
     ],
   },
   {
-    day: 'Saturday',
-    date: 'October 17',
-    anchor: 'Oktoberfest in Livingston, 4-7 PM',
+    id: 3,
+    dow: 'SAT',
+    num: '17',
+    title: 'Hike, fish, Oktoberfest',
+    note: 'The one day with something actually scheduled.',
     items: [
-      'Quick hike in the morning',
-      'Fly fishing near the house over lunch or after naps',
-      '2nd Street Oktoberfest in downtown Livingston, 4-7 PM',
-      'Clean up and take out trash',
-      'Bonfire and hot tub',
+      {
+        time: '9:00 am',
+        title: 'Pine Creek Falls',
+        detail:
+          '24 minutes out. 1.2 miles to the falls and back if the kids are done, up to ten if anyone has the legs for it.',
+        tag: 'easy · family',
+        tagTone: 'trail',
+      },
+      {
+        time: '1:00 pm',
+        title: 'Fish the home water',
+        detail: 'Chicory access again over lunch or after naps. It is a mile away, so it costs nothing to try.',
+        tag: 'licence needed',
+        tagTone: 'water',
+      },
+      {
+        time: '4:00 pm',
+        title: '2nd Street Oktoberfest, Livingston',
+        detail:
+          'Runs 4 to 7 in downtown Livingston, 25 minutes from the house. Open question from the group chat: do we secretly sign the men up for the stein competition?',
+        tag: '4–7 pm sharp',
+        tagTone: 'booking',
+      },
+      {
+        time: '8:00 pm',
+        title: 'Trash out, then the fire',
+        detail: 'Do the bins and the sweep tonight so Sunday is only bags and doors. Bonfire and hot tub after.',
+      },
     ],
-    openQuestions: ['Big night out for dinner, or keep it chill at the house?'],
   },
   {
-    day: 'Sunday',
-    date: 'October 18',
-    anchor: 'Checkout by 10:00 AM',
-    items: ['Pack up and clear out', 'Departures from Bozeman through the afternoon'],
-    openQuestions: ['Can we ask the host for a late checkout?'],
+    id: 4,
+    dow: 'SUN',
+    num: '18',
+    title: 'Out slow',
+    note: 'Checkout is 10:00 am, unless someone asks nicely.',
+    items: [
+      {
+        time: '8:00 am',
+        title: 'Leftovers, coffee, last soak',
+        detail: 'Strip beds, run the dishwasher, sweep the mud room. Twenty minutes if everyone helps.',
+      },
+      {
+        time: '10:00 am',
+        title: 'Checkout',
+        detail: 'Worth asking the host for a late one. Nobody has asked yet.',
+        tag: 'someone ask',
+        tagTone: 'booking',
+      },
+      {
+        time: '2:00 pm',
+        title: 'Flights out',
+        detail:
+          'Liv & Joe at 2:00, Jord at 3:30. Nat is not out until Monday at 2. Gas up in Belgrade, it is cheaper.',
+      },
+    ],
   },
 ]
 
@@ -275,29 +234,151 @@ export interface Party {
   depart: string
 }
 
-export const parties: Party[] = [
-  { name: 'Nat Fam', arrive: 'Thursday, 12:30 PM', depart: 'Monday, 2:00 PM' },
-  { name: 'Han & Mal', arrive: 'Previous weekend', depart: 'Sunday morning or afternoon (flexible)' },
-  { name: 'Liv & Joe', arrive: 'Thursday, 12:30 PM', depart: 'Sunday, 2:00 PM' },
-  { name: 'Jord Fam', arrive: 'Thursday, 1:20 PM', depart: 'Sunday, 3:30 PM' },
+export const roster: Party[] = [
+  { name: 'Nat Fam', arrive: 'Thu 12:30 pm', depart: 'Mon 2:00 pm' },
+  { name: 'Han & Mal', arrive: 'Previous weekend', depart: 'Sun, flexible' },
+  { name: 'Liv & Joe', arrive: 'Thu 12:30 pm', depart: 'Sun 2:00 pm' },
+  { name: 'Jord Fam', arrive: 'Thu 1:20 pm', depart: 'Sun 3:30 pm' },
 ]
 
-export interface Expense {
-  label: string
-  perParty: number | null
-  total: number | null
+export const seedExpenses = [
+  { id: 'e1', what: 'Airbnb · share', by: 'Nat Fam', amount: 902.61 },
+  { id: 'e2', what: 'Airbnb · share', by: 'Han & Mal', amount: 902.61 },
+  { id: 'e3', what: 'Airbnb · share', by: 'Liv & Joe', amount: 902.61 },
+  { id: 'e4', what: 'Airbnb · share', by: 'Jord Fam', amount: 902.61 },
+]
+
+export type PinCategory = 'hiking' | 'fishing' | 'springs' | 'basecamp' | 'food' | 'other'
+
+export const categories: Record<PinCategory, { label: string; color: string }> = {
+  hiking: { label: 'Hiking', color: '#3C7D2F' },
+  fishing: { label: 'Fishing', color: '#2C6B7A' },
+  springs: { label: 'Hot springs', color: '#9A6B14' },
+  basecamp: { label: 'Base camp', color: '#103606' },
+  food: { label: 'Food & drink', color: '#A8432B' },
+  other: { label: 'Other', color: '#5E6750' },
 }
 
-export const expenses: Expense[] = [
-  { label: 'Airbnb', perParty: 902.61, total: 3610.44 },
-  { label: 'Sprinter van', perParty: null, total: null },
-  { label: 'Groceries', perParty: null, total: null },
-  { label: 'Booze', perParty: null, total: null },
-]
+export interface SeedPin {
+  id: string
+  name: string
+  category: PinCategory
+  lat: number
+  lng: number
+  note: string
+}
 
-export const openThreads = [
-  'Do a Walmart or Costco online order for pickup so it is ready when we land?',
-  'How far is Jared from a grocery store? Could we ship an order to his house when we pick up his car?',
-  'Friday: full Yellowstone day, or stay local and fish?',
-  'Ask the host about a late checkout on Sunday.',
+export const seedPins: SeedPin[] = [
+  {
+    id: 'house',
+    name: 'The house',
+    category: 'basecamp',
+    lat: 45.4067679,
+    lng: -110.691467,
+    note: '17 Appaloosa Circle. Four bedrooms, seven beds, hot tub, fire pit.',
+  },
+  {
+    id: 'bzn',
+    name: 'Bozeman airport (BZN)',
+    category: 'other',
+    lat: 45.783499,
+    lng: -111.156982,
+    note: 'Everyone flies in and out of here. About an hour from the front door.',
+  },
+  {
+    id: 'chicory',
+    name: 'REAL Chicory fishing access',
+    category: 'fishing',
+    lat: 45.3975972,
+    lng: -110.7021588,
+    note: 'A mile from the house. Temporary Montana licence required, buy it online.',
+  },
+  {
+    id: 'chico',
+    name: 'Chico Hot Springs',
+    category: 'springs',
+    lat: 45.337714,
+    lng: -110.692156,
+    note: 'Twelve minutes out. $14 a soak. Pools first, dining room after.',
+  },
+  {
+    id: 'pine-creek',
+    name: 'Pine Creek Falls',
+    category: 'hiking',
+    lat: 45.4885737,
+    lng: -110.5007518,
+    note: '1.2 miles to the falls, or push on to the lake. Family friendly.',
+  },
+  {
+    id: 'old-saloon',
+    name: 'The Old Saloon',
+    category: 'food',
+    lat: 45.369276,
+    lng: -110.734104,
+    note: 'Emigrant. Cheap, twelve minutes off, open for lunch and dinner.',
+  },
+  {
+    id: 'follow-yer-nose',
+    name: 'Follow Yer Nose BBQ',
+    category: 'food',
+    lat: 45.369501,
+    lng: -110.73492,
+    note: 'Live music, outdoor seating, takes big pickup orders for under 30 people.',
+  },
+  {
+    id: 'sage',
+    name: 'Sage Lodge',
+    category: 'food',
+    lat: 45.355057,
+    lng: -110.727003,
+    note: 'The nice one. Dining room, bar and a patio, twelve minutes away.',
+  },
+  {
+    id: 'emigrant-store',
+    name: 'Emigrant General Store',
+    category: 'other',
+    lat: 45.3687301,
+    lng: -110.7321775,
+    note: 'Closest gas and milk. Anything bigger means driving to Livingston.',
+  },
+  {
+    id: 'grizzly',
+    name: 'Montana Grizzly Encounter',
+    category: 'other',
+    lat: 45.663969,
+    lng: -110.834041,
+    note: '$13.50, kids free. Between Bozeman and Livingston, so it is a free stop on the drive in.',
+  },
+  {
+    id: 'oktoberfest',
+    name: '2nd Street Oktoberfest',
+    category: 'food',
+    lat: 45.662387,
+    lng: -110.56159,
+    note: 'Downtown Livingston, Saturday 4 to 7. Twenty-five minutes from the house.',
+  },
+  {
+    id: 'mammoth',
+    name: 'Mammoth Hot Springs',
+    category: 'springs',
+    lat: 44.962395,
+    lng: -110.714357,
+    note: 'North end of Yellowstone and the closest park stop. An hour out.',
+  },
+  {
+    id: 'midway-geyser',
+    name: 'Midway Geyser Basin',
+    category: 'other',
+    lat: 44.525918,
+    lng: -110.837603,
+    note: 'Grand Prismatic. Ten minutes back up the road from Old Faithful.',
+  },
+  {
+    id: 'old-faithful',
+    name: 'Old Faithful',
+    category: 'other',
+    lat: 44.459626,
+    lng: -110.831287,
+    note: 'Farthest point in, 2 hr 30 each way. Do it first or not at all.',
+  },
 ]

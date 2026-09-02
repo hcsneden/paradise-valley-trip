@@ -1,0 +1,283 @@
+import { useCallback, useEffect, useRef, useState } from 'react'
+import L from 'leaflet'
+import 'leaflet/dist/leaflet.css'
+import { categories, type PinCategory } from '../data/trip'
+import type { Pin, TripState } from '../lib/store'
+
+const TOPO = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}'
+const OSM_FALLBACK = 'https://tile.openstreetmap.de/{z}/{x}/{y}.png'
+const ATTRIBUTION = 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ, USGS, NPS'
+
+const categoryKeys = Object.keys(categories) as PinCategory[]
+
+const escapeHtml = (value: string) =>
+  value.replace(/[&<>"]/g, (char) => `&${{ '&': 'amp', '<': 'lt', '>': 'gt', '"': 'quot' }[char]};`)
+
+const markerIcon = (color: string) =>
+  L.divIcon({
+    className: '',
+    iconSize: [16, 16],
+    iconAnchor: [8, 8],
+    popupAnchor: [0, -9],
+    html: `<span style="display:block;width:16px;height:16px;border-radius:999px;background:${color};border:2.5px solid #FBF7E3;box-shadow:0 1px 4px rgba(22,39,14,.45)"></span>`,
+  })
+
+const popupHtml = (pin: Pin) => {
+  const meta = categories[pin.category]
+  return `<span class="pop-name">${escapeHtml(pin.name)}</span>
+    <span class="pop-cat" style="color:${meta.color}">${escapeHtml(meta.label)}</span>
+    ${pin.note ? `<div class="pop-note">${escapeHtml(pin.note)}</div>` : ''}
+    ${pin.addedBy ? `<div class="pin-by">added by ${escapeHtml(pin.addedBy)}</div>` : ''}`
+}
+
+const emptyDraft = { name: '', category: 'hiking' as PinCategory, note: '' }
+
+interface MapTabProps {
+  state: TripState
+  user: string
+  visible: boolean
+  onAdd: (pin: Omit<Pin, 'id'>) => void
+  onRemove: (id: string) => void
+}
+
+export const MapTab = ({ state, user, visible, onAdd, onRemove }: MapTabProps) => {
+  const containerRef = useRef<HTMLDivElement>(null)
+  const mapRef = useRef<L.Map | null>(null)
+  const layerRef = useRef<L.LayerGroup | null>(null)
+  const markersRef = useRef<Record<string, L.Marker>>({})
+  const pendingRef = useRef<L.Marker | null>(null)
+
+  const [filters, setFilters] = useState<Record<PinCategory, boolean>>(
+    () => Object.fromEntries(categoryKeys.map((key) => [key, true])) as Record<PinCategory, boolean>
+  )
+  const [adding, setAdding] = useState(false)
+  const [spot, setSpot] = useState<{ lat: number; lng: number } | null>(null)
+  const [draft, setDraft] = useState(emptyDraft)
+  const [who, setWho] = useState('')
+  const [invalid, setInvalid] = useState(false)
+
+  useEffect(() => {
+    if (!containerRef.current || mapRef.current) return
+
+    const map = L.map(containerRef.current, { scrollWheelZoom: false }).setView([45.34, -110.7], 10)
+    const tiles = L.tileLayer(TOPO, { maxZoom: 17, attribution: ATTRIBUTION }).addTo(map)
+
+    let switched = false
+    tiles.on('tileerror', () => {
+      if (switched) return
+      switched = true
+      tiles.setUrl(OSM_FALLBACK)
+    })
+
+    layerRef.current = L.layerGroup().addTo(map)
+    mapRef.current = map
+
+    const observer = new ResizeObserver(() => map.invalidateSize())
+    observer.observe(containerRef.current)
+
+    return () => {
+      observer.disconnect()
+      map.remove()
+      mapRef.current = null
+    }
+  }, [])
+
+  useEffect(() => {
+    if (visible) setTimeout(() => mapRef.current?.invalidateSize(), 0)
+  }, [visible])
+
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map) return
+    const handler = (event: L.LeafletMouseEvent) => {
+      if (!adding) return
+      setSpot({ lat: event.latlng.lat, lng: event.latlng.lng })
+    }
+    map.on('click', handler)
+    return () => {
+      map.off('click', handler)
+    }
+  }, [adding])
+
+  useEffect(() => {
+    const layer = layerRef.current
+    if (!layer) return
+    layer.clearLayers()
+    markersRef.current = {}
+    state.pins
+      .filter((pin) => filters[pin.category])
+      .forEach((pin) => {
+        const marker = L.marker([pin.lat, pin.lng], { icon: markerIcon(categories[pin.category].color) })
+          .bindPopup(popupHtml(pin))
+          .addTo(layer)
+        markersRef.current[pin.id] = marker
+      })
+  }, [state.pins, filters])
+
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map) return
+    pendingRef.current?.remove()
+    pendingRef.current = null
+    if (!spot) return
+    pendingRef.current = L.marker([spot.lat, spot.lng], { icon: markerIcon('#9A6B14') }).addTo(map)
+  }, [spot])
+
+  const cancel = useCallback(() => {
+    setAdding(false)
+    setSpot(null)
+    setDraft(emptyDraft)
+    setInvalid(false)
+  }, [])
+
+  const save = () => {
+    if (!spot) return
+    if (!draft.name.trim()) {
+      setInvalid(true)
+      return
+    }
+    onAdd({
+      name: draft.name.trim(),
+      category: draft.category,
+      note: draft.note.trim(),
+      lat: spot.lat,
+      lng: spot.lng,
+      addedBy: (who || user).trim() || 'anonymous',
+    })
+    cancel()
+  }
+
+  const flyTo = (pin: Pin) => {
+    mapRef.current?.flyTo([pin.lat, pin.lng], 12, { duration: 0.6 })
+    markersRef.current[pin.id]?.openPopup()
+  }
+
+  const shown = state.pins.filter((pin) => filters[pin.category])
+
+  return (
+    <div className="section-pad">
+      <div className="intro">
+        <h2>Where the good stuff is</h2>
+        <p>Tap a spot to fly to it. Add your own trailheads, fishing holes and anything else worth knowing.</p>
+      </div>
+
+      <div className="map-card">
+        <div ref={containerRef} className="map-canvas" style={{ cursor: adding ? 'crosshair' : undefined }} />
+
+        {adding && !spot && <div className="hint">Tap the map where your spot goes</div>}
+
+        {spot && (
+          <div className="map-form">
+            <input
+              className={invalid ? 'pill-input invalid' : 'pill-input'}
+              value={draft.name}
+              onChange={(event) => {
+                setDraft({ ...draft, name: event.target.value })
+                setInvalid(false)
+              }}
+              placeholder="What is it called?"
+              aria-label="Spot name"
+            />
+            <select
+              value={draft.category}
+              onChange={(event) => setDraft({ ...draft, category: event.target.value as PinCategory })}
+              aria-label="Category"
+            >
+              {categoryKeys.map((key) => (
+                <option key={key} value={key}>
+                  {categories[key].label}
+                </option>
+              ))}
+            </select>
+            <textarea
+              rows={2}
+              value={draft.note}
+              onChange={(event) => setDraft({ ...draft, note: event.target.value })}
+              placeholder="Why should we go?"
+              aria-label="Note"
+            />
+            <input
+              value={who || user}
+              onChange={(event) => setWho(event.target.value)}
+              placeholder="your name"
+              aria-label="Your name"
+            />
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button className="btn-forest" onClick={save} style={{ flex: 1 }}>
+                Drop it
+              </button>
+              <button className="btn-ghost" onClick={cancel}>
+                Nope
+              </button>
+            </div>
+          </div>
+        )}
+
+        <div className="map-side">
+          <div className="map-side-head">
+            <span className="eyebrow" style={{ color: 'var(--slate)' }}>
+              Spots · {shown.length}
+            </span>
+            <button
+              className="btn-forest"
+              style={{ padding: '7px 13px', fontSize: 12.5 }}
+              onClick={() => (adding ? cancel() : setAdding(true))}
+            >
+              {adding ? 'Cancel' : '+ Add a spot'}
+            </button>
+          </div>
+
+          <div className="chips">
+            {categoryKeys.map((key) => (
+              <button
+                key={key}
+                className={filters[key] ? 'chip on' : 'chip'}
+                onClick={() => setFilters({ ...filters, [key]: !filters[key] })}
+                aria-pressed={filters[key]}
+              >
+                <span className="sq" style={{ background: categories[key].color }} />
+                {categories[key].label}
+              </button>
+            ))}
+          </div>
+
+          {shown.length === 0 ? (
+            <p className="empty">No spots in these categories yet.</p>
+          ) : (
+            shown.map((pin) => (
+              <div key={pin.id} style={{ display: 'flex', alignItems: 'flex-start' }}>
+                <button className="pin-row" onClick={() => flyTo(pin)}>
+                  <span className="pin-dot" style={{ background: categories[pin.category].color }} />
+                  <span style={{ flex: 1, minWidth: 0 }}>
+                    <span className="pin-name">{pin.name}</span>
+                    {pin.note && (
+                      <span className="pin-note" style={{ display: 'block' }}>
+                        {pin.note.length > 78 ? `${pin.note.slice(0, 78)}…` : pin.note}
+                      </span>
+                    )}
+                    {pin.addedBy && <span className="pin-by">added by {pin.addedBy}</span>}
+                  </span>
+                </button>
+                {!pin.seed && (
+                  <button
+                    className="x-btn"
+                    style={{ alignSelf: 'center', marginRight: 10 }}
+                    onClick={() => onRemove(pin.id)}
+                    aria-label={`Remove ${pin.name}`}
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+
+      <p className="footnote">
+        House pin is the address from the planning sheet. Check NPS and Custer Gallatin conditions before
+        you drive anywhere in October.
+      </p>
+    </div>
+  )
+}
