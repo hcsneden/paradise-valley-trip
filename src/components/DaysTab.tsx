@@ -1,16 +1,18 @@
 import { useState } from 'react'
 import { days } from '../data/trip'
 import type { Suggestion, TripState } from '../lib/store'
+import { WhoPicker } from './WhoPicker'
 
 interface DaysTabProps {
   state: TripState
-  user: string
+  who: string
+  onWho: (name: string) => void
   voted: Record<string, boolean>
   onAdd: (dayId: number, text: string) => void
   onVote: (id: string) => void
 }
 
-export const DaysTab = ({ state, user, voted, onAdd, onVote }: DaysTabProps) => {
+export const DaysTab = ({ state, who, onWho, voted, onAdd, onVote }: DaysTabProps) => {
   const [dayId, setDayId] = useState(1)
   const [open, setOpen] = useState<Record<string, boolean>>({})
   const [draft, setDraft] = useState('')
@@ -126,11 +128,9 @@ export const DaysTab = ({ state, user, voted, onAdd, onVote }: DaysTabProps) => 
             </button>
           </div>
 
-          {!user.trim() && (
-            <p className="footnote" style={{ margin: '10px 0 0' }}>
-              Add your name up top or this posts as anonymous.
-            </p>
-          )}
+          <div style={{ marginTop: 10 }}>
+            <WhoPicker value={who} onChange={onWho} label="Posting as" />
+          </div>
         </div>
       </div>
     </>

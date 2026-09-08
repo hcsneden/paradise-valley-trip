@@ -2,11 +2,14 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { categories, type PinCategory } from '../data/trip'
+import { WhoPicker } from './WhoPicker'
 import type { Pin, TripState } from '../lib/store'
 
 const TOPO = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}'
 const OSM_FALLBACK = 'https://tile.openstreetmap.de/{z}/{x}/{y}.png'
 const ATTRIBUTION = 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ, USGS, NPS'
+const INITIAL_CENTER: L.LatLngExpression = [45.34, -110.7]
+const INITIAL_ZOOM = 10
 
 const categoryKeys = Object.keys(categories) as PinCategory[]
 
@@ -34,18 +37,21 @@ const emptyDraft = { name: '', category: 'hiking' as PinCategory, note: '' }
 
 interface MapTabProps {
   state: TripState
-  user: string
+  who: string
+  onWho: (name: string) => void
   visible: boolean
   onAdd: (pin: Omit<Pin, 'id'>) => void
   onRemove: (id: string) => void
 }
 
-export const MapTab = ({ state, user, visible, onAdd, onRemove }: MapTabProps) => {
+export const MapTab = ({ state, who, onWho, visible, onAdd, onRemove }: MapTabProps) => {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<L.Map | null>(null)
   const layerRef = useRef<L.LayerGroup | null>(null)
   const markersRef = useRef<Record<string, L.Marker>>({})
   const pendingRef = useRef<L.Marker | null>(null)
+  const refreshRef = useRef<(() => boolean) | null>(null)
+  const sizedRef = useRef(false)
 
   const [filters, setFilters] = useState<Record<PinCategory, boolean>>(
     () => Object.fromEntries(categoryKeys.map((key) => [key, true])) as Record<PinCategory, boolean>
@@ -53,13 +59,12 @@ export const MapTab = ({ state, user, visible, onAdd, onRemove }: MapTabProps) =
   const [adding, setAdding] = useState(false)
   const [spot, setSpot] = useState<{ lat: number; lng: number } | null>(null)
   const [draft, setDraft] = useState(emptyDraft)
-  const [who, setWho] = useState('')
   const [invalid, setInvalid] = useState(false)
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return
 
-    const map = L.map(containerRef.current, { scrollWheelZoom: false }).setView([45.34, -110.7], 10)
+    const map = L.map(containerRef.current, { scrollWheelZoom: false }).setView(INITIAL_CENTER, INITIAL_ZOOM)
     const tiles = L.tileLayer(TOPO, { maxZoom: 17, attribution: ATTRIBUTION }).addTo(map)
 
     let switched = false
@@ -72,18 +77,51 @@ export const MapTab = ({ state, user, visible, onAdd, onRemove }: MapTabProps) =
     layerRef.current = L.layerGroup().addTo(map)
     mapRef.current = map
 
-    const observer = new ResizeObserver(() => map.invalidateSize())
-    observer.observe(containerRef.current)
+    const refresh = () => {
+      if (!containerRef.current?.clientWidth) return false
+      map.invalidateSize()
+      map.setView(INITIAL_CENTER, INITIAL_ZOOM)
+      return true
+    }
+    refreshRef.current = refresh
+
+    const resizeObserver = new ResizeObserver(() => map.invalidateSize())
+    resizeObserver.observe(containerRef.current)
+
+    const intersectionObserver = new IntersectionObserver((entries) => {
+      if (entries.some((entry) => entry.isIntersecting) && !sizedRef.current) {
+        sizedRef.current = refresh()
+      }
+    })
+    intersectionObserver.observe(containerRef.current)
+
+    let attempts = 0
+    const poll = window.setInterval(() => {
+      attempts += 1
+      if (sizedRef.current || attempts > 20) {
+        window.clearInterval(poll)
+        return
+      }
+      sizedRef.current = refresh()
+    }, 100)
 
     return () => {
-      observer.disconnect()
+      window.clearInterval(poll)
+      resizeObserver.disconnect()
+      intersectionObserver.disconnect()
       map.remove()
       mapRef.current = null
+      refreshRef.current = null
+      sizedRef.current = false
     }
   }, [])
 
   useEffect(() => {
-    if (visible) setTimeout(() => mapRef.current?.invalidateSize(), 0)
+    if (!visible) return
+    requestAnimationFrame(() => {
+      if (!sizedRef.current) sizedRef.current = Boolean(refreshRef.current?.())
+      else mapRef.current?.invalidateSize()
+    })
   }, [visible])
 
   useEffect(() => {
@@ -142,7 +180,7 @@ export const MapTab = ({ state, user, visible, onAdd, onRemove }: MapTabProps) =
       note: draft.note.trim(),
       lat: spot.lat,
       lng: spot.lng,
-      addedBy: (who || user).trim() || 'anonymous',
+      addedBy: who,
     })
     cancel()
   }
@@ -196,12 +234,7 @@ export const MapTab = ({ state, user, visible, onAdd, onRemove }: MapTabProps) =
               placeholder="Why should we go?"
               aria-label="Note"
             />
-            <input
-              value={who || user}
-              onChange={(event) => setWho(event.target.value)}
-              placeholder="your name"
-              aria-label="Your name"
-            />
+            <WhoPicker value={who} onChange={onWho} label="Added by" />
             <div style={{ display: 'flex', gap: 8 }}>
               <button className="btn-forest" onClick={save} style={{ flex: 1 }}>
                 Drop it

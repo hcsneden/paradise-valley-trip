@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { roster } from '../data/trip'
+import { partyFor, roster } from '../data/trip'
+import { WhoPicker } from './WhoPicker'
 import type { Expense, TripState } from '../lib/store'
 
 const money = (value: number) =>
@@ -16,15 +17,16 @@ const parseAmount = (raw: string) => {
 
 interface MoneyTabProps {
   state: TripState
+  who: string
+  onWho: (name: string) => void
   onAdd: (expense: Omit<Expense, 'id'>) => void
   onRemove: (id: string) => void
 }
 
-export const MoneyTab = ({ state, onAdd, onRemove }: MoneyTabProps) => {
+export const MoneyTab = ({ state, who, onWho, onAdd, onRemove }: MoneyTabProps) => {
   const [view, setView] = useState<'bal' | 'exp'>('bal')
   const [what, setWhat] = useState('')
   const [amount, setAmount] = useState('')
-  const [payer, setPayer] = useState(roster[0].name)
 
   const total = state.expenses.reduce((sum, expense) => sum + expense.amount, 0)
   const share = total / roster.length
@@ -41,7 +43,7 @@ export const MoneyTab = ({ state, onAdd, onRemove }: MoneyTabProps) => {
   const submit = () => {
     const value = parseAmount(amount)
     if (!what.trim() || value === null) return
-    onAdd({ what: what.trim(), by: payer, amount: value })
+    onAdd({ what: what.trim(), by: partyFor(who), amount: value })
     setWhat('')
     setAmount('')
   }
@@ -143,30 +145,12 @@ export const MoneyTab = ({ state, onAdd, onRemove }: MoneyTabProps) => {
             Log it
           </button>
         </div>
-        <select
-          value={payer}
-          onChange={(event) => setPayer(event.target.value)}
-          aria-label="Who paid"
-          style={{
-            width: '100%',
-            marginTop: 8,
-            padding: '11px 14px',
-            border: '2px solid var(--ink)',
-            borderRadius: 999,
-            background: 'var(--paper)',
-            font: '400 14px var(--sans)',
-            color: 'var(--ink)',
-          }}
-        >
-          {roster.map((party) => (
-            <option key={party.name} value={party.name}>
-              Paid by {party.name}
-            </option>
-          ))}
-        </select>
+        <div style={{ marginTop: 8 }}>
+          <WhoPicker value={who} onChange={onWho} label="Paid by" />
+        </div>
         <p className="footnote" style={{ margin: '10px 0 0' }}>
-          Everything splits {roster.length} ways between the parties, so whoever paid has to be one of
-          them.
+          Logged against {partyFor(who)}. Everything splits {roster.length} ways between the parties,
+          so the cost lands on whoever you are travelling with.
         </p>
       </div>
     </div>

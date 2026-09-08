@@ -1,7 +1,7 @@
 const TABS = {
   pin: { name: 'Map Points', headers: ['id', 'name', 'category', 'lat', 'lng', 'note', 'addedBy', 'createdAt'] },
   suggestion: { name: 'Ideas', headers: ['id', 'dayId', 'text', 'by', 'votes', 'createdAt'] },
-  expense: { name: 'Expenses', headers: ['id', 'what', 'by', 'amount', 'createdAt'] },
+  expense: { name: 'Trip Expenses', headers: ['id', 'what', 'by', 'amount', 'createdAt'] },
 }
 
 const NUMERIC = ['lat', 'lng', 'dayId', 'votes', 'amount']

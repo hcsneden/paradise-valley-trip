@@ -1,6 +1,7 @@
 import { seedExpenses, seedPins, type PinCategory } from '../data/trip'
 
-export const SHEET_ENDPOINT = ''
+export const SHEET_ENDPOINT =
+  'https://script.google.com/macros/s/AKfycbwGVEHui87PM0uCe7EF1d5-A6WCKCj61y0r06CcuoxeJjeOud2DoX6XjQoLemoM00B3yw/exec'
 
 export interface Pin {
   id: string

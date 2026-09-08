@@ -6,12 +6,7 @@ const daysOut = () => {
   return Math.max(diff, 0)
 }
 
-interface HeaderProps {
-  user: string
-  onUser: (value: string) => void
-}
-
-export const Header = ({ user, onUser }: HeaderProps) => (
+export const Header = () => (
   <header className="header">
     <div className="header-top">
       <span className="header-eyebrow">{trip.eyebrow}</span>
@@ -20,16 +15,5 @@ export const Header = ({ user, onUser }: HeaderProps) => (
 
     <h1>{trip.title}</h1>
     <p className="header-sub">{trip.subline}</p>
-
-    <div className="identity">
-      <label htmlFor="who">You are</label>
-      <input
-        id="who"
-        value={user}
-        onChange={(event) => onUser(event.target.value)}
-        placeholder="type your name"
-        autoComplete="name"
-      />
-    </div>
   </header>
 )

@@ -856,3 +856,14 @@ a:focus-visible {
 .leaflet-bar a {
   color: var(--ink);
 }
+
+.who-picker {
+  width: 100%;
+  padding: 10px 14px;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  background: var(--paper);
+  font: 600 13px var(--sans);
+  color: var(--ink);
+  outline: none;
+}

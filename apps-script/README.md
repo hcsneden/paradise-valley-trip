@@ -10,7 +10,11 @@ It creates and manages three tabs, so nothing you already have on the sheet is t
 | --- | --- |
 | `Map Points` | pins people drop on the map |
 | `Ideas` | per-day suggestions and their vote counts |
-| `Expenses` | the receipt log behind the settle-up math |
+| `Trip Expenses` | the receipt log behind the settle-up math |
+
+The expense tab is called `Trip Expenses` rather than `Expenses` because the spreadsheet
+already has an `Expenses` tab holding a per-person cost matrix, which is a different shape
+from the flat log this script reads and writes.
 
 ## Setup
 

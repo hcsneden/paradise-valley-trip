@@ -241,6 +241,25 @@ export const roster: Party[] = [
   { name: 'Jord Fam', arrive: 'Thu 1:20 pm', depart: 'Sun 3:30 pm' },
 ]
 
+export interface Member {
+  name: string
+  party: string
+}
+
+export const members: Member[] = [
+  { name: 'Natalie', party: 'Nat Fam' },
+  { name: 'Gordy', party: 'Nat Fam' },
+  { name: 'Hannah', party: 'Han & Mal' },
+  { name: 'Mallory', party: 'Han & Mal' },
+  { name: 'Liv', party: 'Liv & Joe' },
+  { name: 'Joe', party: 'Liv & Joe' },
+  { name: 'Jordan', party: 'Jord Fam' },
+  { name: 'Tim', party: 'Jord Fam' },
+]
+
+export const partyFor = (name: string) =>
+  members.find((member) => member.name === name)?.party ?? roster[0].name
+
 export const seedExpenses = [
   { id: 'e1', what: 'Airbnb · share', by: 'Nat Fam', amount: 902.61 },
   { id: 'e2', what: 'Airbnb · share', by: 'Han & Mal', amount: 902.61 },

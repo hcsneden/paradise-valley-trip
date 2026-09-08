@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { members } from './data/trip'
 import { Header } from './components/Header'
 import { TabBar, type Tab } from './components/TabBar'
 import { DaysTab } from './components/DaysTab'
@@ -34,7 +35,7 @@ const readStored = (key: string, fallback: string) => {
 export const App = () => {
   const [tab, setTab] = useState<Tab>('days')
   const [state, setState] = useState<TripState>(seedState)
-  const [user, setUser] = useState(() => readStored(USER_KEY, ''))
+  const [who, setWho] = useState(() => readStored(USER_KEY, members[0].name))
   const [voted, setVoted] = useState<Record<string, boolean>>(() => {
     try {
       return JSON.parse(readStored(VOTED_KEY, '{}'))
@@ -52,11 +53,11 @@ export const App = () => {
 
   useEffect(() => {
     try {
-      localStorage.setItem(USER_KEY, user)
+      localStorage.setItem(USER_KEY, who)
     } catch {
       return
     }
-  }, [user])
+  }, [who])
 
   const run = (work: Promise<TripState>) => {
     work.then(setState).catch((err: Error) => setError(err.message))
@@ -74,7 +75,7 @@ export const App = () => {
 
   return (
     <div className="app">
-      <Header user={user} onUser={setUser} />
+      <Header />
 
       {error && (
         <div className="section-pad" style={{ paddingBottom: 0 }}>
@@ -94,10 +95,11 @@ export const App = () => {
       <div style={{ display: tab === 'days' ? 'block' : 'none' }}>
         <DaysTab
           state={state}
-          user={user}
+          who={who}
+          onWho={setWho}
           voted={voted}
           onAdd={(dayId, text) =>
-            run(addSuggestion(state, { dayId, text, by: user.trim() || 'anonymous' }))
+            run(addSuggestion(state, { dayId, text, by: who }))
           }
           onVote={(id) => {
             if (voted[id]) return
@@ -110,7 +112,8 @@ export const App = () => {
       <div style={{ display: tab === 'map' ? 'block' : 'none' }}>
         <MapTab
           state={state}
-          user={user}
+          who={who}
+          onWho={setWho}
           visible={tab === 'map'}
           onAdd={(pin: Omit<Pin, 'id'>) => run(addPin(state, pin))}
           onRemove={(id) => run(removePin(state, id))}
@@ -124,6 +127,8 @@ export const App = () => {
       <div style={{ display: tab === 'money' ? 'block' : 'none' }}>
         <MoneyTab
           state={state}
+          who={who}
+          onWho={setWho}
           onAdd={(expense: Omit<Expense, 'id'>) => run(addExpense(state, expense))}
           onRemove={(id) => run(removeExpense(state, id))}
         />
