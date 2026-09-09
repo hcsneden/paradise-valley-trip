@@ -75,8 +75,13 @@ export const App = () => {
 
   return (
     <div className="app">
-      <Header />
+      <div className="layout">
+        <div className="sidebar">
+          <Header />
+          <TabBar tab={tab} onTab={setTab} />
+        </div>
 
+        <div className="main">
       {error && (
         <div className="section-pad" style={{ paddingBottom: 0 }}>
           <p className="sync-note">{error}</p>
@@ -92,7 +97,7 @@ export const App = () => {
         </div>
       )}
 
-      <div style={{ display: tab === 'days' ? 'block' : 'none' }}>
+      <div className="pane pane-days" style={{ display: tab === 'days' ? 'block' : 'none' }}>
         <DaysTab
           state={state}
           who={who}
@@ -109,7 +114,7 @@ export const App = () => {
         />
       </div>
 
-      <div style={{ display: tab === 'map' ? 'block' : 'none' }}>
+      <div className="pane pane-map" style={{ display: tab === 'map' ? 'block' : 'none' }}>
         <MapTab
           state={state}
           who={who}
@@ -120,11 +125,11 @@ export const App = () => {
         />
       </div>
 
-      <div style={{ display: tab === 'house' ? 'block' : 'none' }}>
+      <div className="pane pane-house" style={{ display: tab === 'house' ? 'block' : 'none' }}>
         <HouseTab />
       </div>
 
-      <div style={{ display: tab === 'money' ? 'block' : 'none' }}>
+      <div className="pane pane-money" style={{ display: tab === 'money' ? 'block' : 'none' }}>
         <MoneyTab
           state={state}
           who={who}
@@ -134,7 +139,8 @@ export const App = () => {
         />
       </div>
 
-      <TabBar tab={tab} onTab={setTab} />
+        </div>
+      </div>
     </div>
   )
 }

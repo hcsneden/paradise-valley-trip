@@ -50,6 +50,8 @@ export const MoneyTab = ({ state, who, onWho, onAdd, onRemove }: MoneyTabProps) 
 
   return (
     <div className="section-pad">
+      <div className="money-grid">
+      <div className="money-col">
       <div className="total-card">
         <div>
           <span className="lab">Trip total</span>
@@ -70,7 +72,7 @@ export const MoneyTab = ({ state, who, onWho, onAdd, onRemove }: MoneyTabProps) 
         </button>
       </div>
 
-      {view === 'bal' ? (
+      <div className={view === 'bal' ? 'money-panel on' : 'money-panel'}>
         <>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {balances.map((entry) => {
@@ -94,7 +96,11 @@ export const MoneyTab = ({ state, who, onWho, onAdd, onRemove }: MoneyTabProps) 
             not per head.
           </p>
         </>
-      ) : (
+      </div>
+      </div>
+
+      <div className="money-col">
+      <div className={view === 'exp' ? 'money-panel on' : 'money-panel'}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {state.expenses.length === 0 && <p className="empty">Nothing logged yet.</p>}
           {state.expenses.map((expense) => (
@@ -114,7 +120,7 @@ export const MoneyTab = ({ state, who, onWho, onAdd, onRemove }: MoneyTabProps) 
             </div>
           ))}
         </div>
-      )}
+      </div>
 
       <div className="dashed">
         <input
@@ -136,22 +142,24 @@ export const MoneyTab = ({ state, who, onWho, onAdd, onRemove }: MoneyTabProps) 
             inputMode="decimal"
             aria-label="Amount"
           />
-          <button
-            className="btn-forest"
-            style={{ flex: 1 }}
-            onClick={submit}
-            disabled={!what.trim() || parseAmount(amount) === null}
-          >
-            Log it
-          </button>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <WhoPicker value={who} onChange={onWho} label="Paid by" />
+          </div>
         </div>
-        <div style={{ marginTop: 8 }}>
-          <WhoPicker value={who} onChange={onWho} label="Paid by" />
-        </div>
+        <button
+          className="btn-forest"
+          style={{ width: '100%', marginTop: 8 }}
+          onClick={submit}
+          disabled={!what.trim() || parseAmount(amount) === null}
+        >
+          Log it
+        </button>
         <p className="footnote" style={{ margin: '10px 0 0' }}>
           Logged against {partyFor(who)}. Everything splits {roster.length} ways between the parties,
           so the cost lands on whoever you are travelling with.
         </p>
+      </div>
+      </div>
       </div>
     </div>
   )

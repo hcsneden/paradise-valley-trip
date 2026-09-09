@@ -11,13 +11,9 @@ export const HouseTab = () => {
         <p>Everything you will look up halfway through the trip.</p>
       </div>
 
-      <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-        <div style={{ position: 'relative', aspectRatio: '16 / 10', background: 'var(--straw)' }}>
-          <img
-            src={listing.images[photo]}
-            alt={`${listing.title}, photo ${photo + 1}`}
-            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-          />
+      <div className="card card-wide" style={{ padding: 0, overflow: 'hidden' }}>
+        <div className="shot">
+          <img src={listing.images[photo]} alt={`${listing.title}, photo ${photo + 1}`} />
           <button
             className="x-btn"
             onClick={() => setPhoto((photo + listing.images.length - 1) % listing.images.length)}

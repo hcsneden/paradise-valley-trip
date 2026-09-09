@@ -49,6 +49,7 @@ export const DaysTab = ({ state, who, onWho, voted, onAdd, onVote }: DaysTabProp
         <p>{day.note}</p>
       </div>
 
+      <div className="day-body">
       <div className="rows">
         {day.items.map((item, index) => {
           const key = `${dayId}-${index}`
@@ -78,7 +79,7 @@ export const DaysTab = ({ state, who, onWho, voted, onAdd, onVote }: DaysTabProp
         })}
       </div>
 
-      <div style={{ padding: '18px 20px 0' }}>
+      <div className="ideas-pad">
         <div className="dashed">
           <div className="dashed-head">
             <span className="eyebrow">Ideas for this day</span>
@@ -132,6 +133,7 @@ export const DaysTab = ({ state, who, onWho, voted, onAdd, onVote }: DaysTabProp
             <WhoPicker value={who} onChange={onWho} label="Posting as" />
           </div>
         </div>
+      </div>
       </div>
     </>
   )
