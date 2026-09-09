@@ -19,6 +19,7 @@ export interface Suggestion {
   dayId: number
   text: string
   by: string
+  time: string
   votes: number
 }
 
@@ -27,15 +28,31 @@ export interface Expense {
   what: string
   by: string
   amount: number
+  seed?: boolean
 }
 
 export interface TripState {
   pins: Pin[]
   suggestions: Suggestion[]
   expenses: Expense[]
+  planVotes: Record<string, number>
 }
 
-const LOCAL_KEY = 'pv-trip-state-v2'
+/** A person is up (+1), down (-1) or neutral (0) on any one item. */
+export type VoteDir = 1 | -1 | 0
+
+export interface PlanVote {
+  id: string
+  votes: number
+}
+
+const asPlanVotes = (rows: PlanVote[] = []): Record<string, number> =>
+  rows.reduce<Record<string, number>>((acc, row) => {
+    acc[row.id] = Number(row.votes) || 0
+    return acc
+  }, {})
+
+const LOCAL_KEY = 'pv-trip-state-v3'
 export const USER_KEY = 'pv-trip-user'
 
 export const isSheetConfigured = () => SHEET_ENDPOINT.length > 0
@@ -43,7 +60,8 @@ export const isSheetConfigured = () => SHEET_ENDPOINT.length > 0
 export const seedState = (): TripState => ({
   pins: seedPins.map((pin) => ({ ...pin, addedBy: '', seed: true })),
   suggestions: [],
-  expenses: seedExpenses.map((expense) => ({ ...expense })),
+  expenses: seedExpenses.map((expense) => ({ ...expense, seed: true })),
+  planVotes: {},
 })
 
 const readLocal = (): TripState => {
@@ -54,7 +72,8 @@ const readLocal = (): TripState => {
     return {
       pins: [...seeded.pins, ...(saved.pins ?? [])],
       suggestions: saved.suggestions ?? [],
-      expenses: saved.expenses ?? seeded.expenses,
+      expenses: [...seeded.expenses, ...(saved.expenses ?? [])],
+      planVotes: saved.planVotes ?? {},
     }
   } catch {
     return seeded
@@ -68,29 +87,43 @@ const writeLocal = (state: TripState) => {
       JSON.stringify({
         pins: state.pins.filter((pin) => !pin.seed),
         suggestions: state.suggestions,
-        expenses: state.expenses,
+        expenses: state.expenses.filter((expense) => !expense.seed),
+        planVotes: state.planVotes,
       })
     )
   } catch {
-    return
+    // A blocked localStorage costs this browser its offline copy, nothing more.
   }
 }
 
-const merge = (remote: Partial<TripState>): TripState => {
+const merge = (remote: Partial<TripState> & { planVotes?: PlanVote[] | Record<string, number> }): TripState => {
   const seeded = seedState()
+  const votes = remote.planVotes
   return {
     pins: [...seeded.pins, ...(remote.pins ?? [])],
     suggestions: remote.suggestions ?? [],
-    expenses: remote.expenses?.length ? remote.expenses : seeded.expenses,
+    // Seeds are prepended, never swapped out: the Airbnb shares are real money that
+    // stays on the books once somebody logs their first coffee.
+    expenses: [...seeded.expenses, ...(remote.expenses ?? [])],
+    planVotes: Array.isArray(votes) ? asPlanVotes(votes) : votes ?? {},
   }
+}
+
+/**
+ * Apps Script answers a failure with an HTML error page, not JSON, so the status has to
+ * be checked before parsing or the user is shown a JSON syntax error instead of a reason.
+ */
+const readJson = async (res: Response, fallback: string) => {
+  if (!res.ok) throw new Error(`${fallback} (${res.status})`)
+  const data = await res.json()
+  if (!data.ok) throw new Error(data.error ?? fallback)
+  return data
 }
 
 export const loadState = async (): Promise<TripState> => {
   if (!isSheetConfigured()) return readLocal()
   const res = await fetch(SHEET_ENDPOINT)
-  const data = await res.json()
-  if (!data.ok) throw new Error(data.error ?? 'Could not load the trip')
-  return merge(data)
+  return merge(await readJson(res, 'Could not load the trip'))
 }
 
 const post = async (body: unknown): Promise<TripState> => {
@@ -99,9 +132,7 @@ const post = async (body: unknown): Promise<TripState> => {
     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
     body: JSON.stringify(body),
   })
-  const data = await res.json()
-  if (!data.ok) throw new Error(data.error ?? 'Could not save')
-  return merge(data)
+  return merge(await readJson(res, 'Could not save'))
 }
 
 const localMutate = (state: TripState, change: Partial<TripState>): TripState => {
@@ -133,12 +164,35 @@ export const addSuggestion = async (
   })
 }
 
-export const voteSuggestion = async (state: TripState, id: string): Promise<TripState> => {
-  if (isSheetConfigured()) return post({ kind: 'suggestion', action: 'vote', id })
+/**
+ * Switching sides is a two-step swing (+1 to -1 is a delta of -2), so the caller
+ * sends the difference rather than the new position and the sheet just adds it on.
+ */
+export const voteDelta = (previous: VoteDir, next: VoteDir) => next - previous
+
+export const voteSuggestion = async (
+  state: TripState,
+  id: string,
+  delta: number
+): Promise<TripState> => {
+  if (!delta) return state
+  if (isSheetConfigured()) return post({ kind: 'suggestion', action: 'vote', id, delta })
   return localMutate(state, {
     suggestions: state.suggestions.map((suggestion) =>
-      suggestion.id === id ? { ...suggestion, votes: suggestion.votes + 1 } : suggestion
+      suggestion.id === id ? { ...suggestion, votes: suggestion.votes + delta } : suggestion
     ),
+  })
+}
+
+export const votePlan = async (
+  state: TripState,
+  id: string,
+  delta: number
+): Promise<TripState> => {
+  if (!delta) return state
+  if (isSheetConfigured()) return post({ kind: 'planVote', action: 'vote', id, delta })
+  return localMutate(state, {
+    planVotes: { ...state.planVotes, [id]: (state.planVotes[id] ?? 0) + delta },
   })
 }
 

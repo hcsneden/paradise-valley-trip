@@ -73,7 +73,6 @@ export const MoneyTab = ({ state, who, onWho, onAdd, onRemove }: MoneyTabProps) 
       </div>
 
       <div className={view === 'bal' ? 'money-panel on' : 'money-panel'}>
-        <>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {balances.map((entry) => {
               const even = Math.abs(entry.balance) < 1
@@ -95,7 +94,6 @@ export const MoneyTab = ({ state, who, onWho, onAdd, onRemove }: MoneyTabProps) 
             Green gets paid back, rust owes. Split {roster.length} ways across the parties on the trip,
             not per head.
           </p>
-        </>
       </div>
       </div>
 
@@ -114,9 +112,17 @@ export const MoneyTab = ({ state, who, onWho, onAdd, onRemove }: MoneyTabProps) 
               <span className="tnum" style={{ font: '800 15px var(--sans)' }}>
                 {money2(expense.amount)}
               </span>
-              <button className="x-btn" onClick={() => onRemove(expense.id)} aria-label={`Remove ${expense.what}`}>
-                ✕
-              </button>
+              {/* The seeded Airbnb shares have no sheet row behind them, so a delete would
+                  no-op server-side and the row would come straight back on the next load. */}
+              {!expense.seed && (
+                <button
+                  className="x-btn"
+                  onClick={() => onRemove(expense.id)}
+                  aria-label={`Remove ${expense.what}`}
+                >
+                  ✕
+                </button>
+              )}
             </div>
           ))}
         </div>

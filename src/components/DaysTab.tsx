@@ -1,21 +1,33 @@
 import { useState } from 'react'
 import { days } from '../data/trip'
-import type { Suggestion, TripState } from '../lib/store'
+import type { Suggestion, TripState, VoteDir } from '../lib/store'
+import { VoteControl } from './VoteControl'
 import { WhoPicker } from './WhoPicker'
 
 interface DaysTabProps {
   state: TripState
   who: string
   onWho: (name: string) => void
-  voted: Record<string, boolean>
-  onAdd: (dayId: number, text: string) => void
-  onVote: (id: string) => void
+  votes: Record<string, VoteDir>
+  onAdd: (dayId: number, text: string, time: string) => void
+  onVote: (id: string, next: VoteDir) => void
+  onPlanVote: (id: string, next: VoteDir) => void
 }
 
-export const DaysTab = ({ state, who, onWho, voted, onAdd, onVote }: DaysTabProps) => {
+/** '14:30' off the time input, '2:30 pm' on the page. */
+const formatTime = (value: string) => {
+  const [rawHour, minute] = value.split(':')
+  const hour = Number(rawHour)
+  if (!Number.isFinite(hour) || !minute) return value
+  const suffix = hour < 12 ? 'am' : 'pm'
+  return `${hour % 12 === 0 ? 12 : hour % 12}:${minute} ${suffix}`
+}
+
+export const DaysTab = ({ state, who, onWho, votes, onAdd, onVote, onPlanVote }: DaysTabProps) => {
   const [dayId, setDayId] = useState(1)
   const [open, setOpen] = useState<Record<string, boolean>>({})
   const [draft, setDraft] = useState('')
+  const [draftTime, setDraftTime] = useState('')
 
   const day = days.find((entry) => entry.id === dayId)!
   const suggestions = state.suggestions
@@ -24,8 +36,9 @@ export const DaysTab = ({ state, who, onWho, voted, onAdd, onVote }: DaysTabProp
 
   const submit = () => {
     if (!draft.trim()) return
-    onAdd(dayId, draft.trim())
+    onAdd(dayId, draft.trim(), draftTime)
     setDraft('')
+    setDraftTime('')
   }
 
   return (
@@ -51,30 +64,36 @@ export const DaysTab = ({ state, who, onWho, voted, onAdd, onVote }: DaysTabProp
 
       <div className="day-body">
       <div className="rows">
-        {day.items.map((item, index) => {
-          const key = `${dayId}-${index}`
-          const expanded = Boolean(open[key])
+        {day.items.map((item) => {
+          const expanded = Boolean(open[item.id])
           return (
-            <button
-              key={key}
-              className="item-row"
-              onClick={() => setOpen({ ...open, [key]: !expanded })}
-              aria-expanded={expanded}
-            >
-              <span className="item-time">{item.time}</span>
-              <span className="item-body">
-                <span className="item-title">{item.title}</span>
-                {expanded && (
-                  <>
-                    <span className="item-detail" style={{ display: 'block' }}>
-                      {item.detail}
-                    </span>
-                    {item.tag && <span className={`tag ${item.tagTone ?? 'trail'}`}>{item.tag}</span>}
-                  </>
-                )}
-              </span>
-              <span className="chev">{expanded ? '▲' : '▼'}</span>
-            </button>
+            <div key={item.id} className="item-row">
+              <button
+                className="item-toggle"
+                onClick={() => setOpen((current) => ({ ...current, [item.id]: !expanded }))}
+                aria-expanded={expanded}
+              >
+                <span className="item-time">{item.time}</span>
+                <span className="item-body">
+                  <span className="item-title">{item.title}</span>
+                  {expanded && (
+                    <>
+                      <span className="item-detail" style={{ display: 'block' }}>
+                        {item.detail}
+                      </span>
+                      {item.tag && <span className={`tag ${item.tagTone ?? 'trail'}`}>{item.tag}</span>}
+                    </>
+                  )}
+                </span>
+                <span className="chev">{expanded ? '▲' : '▼'}</span>
+              </button>
+              <VoteControl
+                score={state.planVotes[item.id] ?? 0}
+                mine={votes[item.id] ?? 0}
+                label={item.title}
+                onVote={(next) => onPlanVote(item.id, next)}
+              />
+            </div>
           )
         })}
       </div>
@@ -98,18 +117,18 @@ export const DaysTab = ({ state, who, onWho, voted, onAdd, onVote }: DaysTabProp
             )}
             {suggestions.map((suggestion: Suggestion) => (
               <div key={suggestion.id} className="sug">
-                <button
-                  className={voted[suggestion.id] ? 'vote voted' : 'vote'}
-                  onClick={() => onVote(suggestion.id)}
-                  disabled={Boolean(voted[suggestion.id])}
-                  aria-label={`Upvote: ${suggestion.text}`}
-                >
-                  <span className="caret">▲</span>
-                  {suggestion.votes}
-                </button>
+                <VoteControl
+                  score={suggestion.votes}
+                  mine={votes[suggestion.id] ?? 0}
+                  label={suggestion.text}
+                  onVote={(next) => onVote(suggestion.id, next)}
+                />
                 <span style={{ flex: 1, minWidth: 0 }}>
                   <span className="sug-text">{suggestion.text}</span>
-                  <span className="sug-by">{suggestion.by}</span>
+                  <span className="sug-by">
+                    {suggestion.time && <span className="sug-time">{formatTime(suggestion.time)}</span>}
+                    {suggestion.by}
+                  </span>
                 </span>
               </div>
             ))}
@@ -123,6 +142,14 @@ export const DaysTab = ({ state, who, onWho, voted, onAdd, onVote }: DaysTabProp
               onKeyDown={(event) => event.key === 'Enter' && submit()}
               placeholder="Throw one in…"
               aria-label="Add an idea for this day"
+            />
+            <input
+              className="pill-input time-input"
+              type="time"
+              value={draftTime}
+              onChange={(event) => setDraftTime(event.target.value)}
+              onKeyDown={(event) => event.key === 'Enter' && submit()}
+              aria-label="Time for this idea"
             />
             <button className="btn-forest" onClick={submit} disabled={!draft.trim()}>
               Post

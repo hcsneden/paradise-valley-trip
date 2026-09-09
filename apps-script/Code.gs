@@ -1,7 +1,10 @@
 const TABS = {
   pin: { name: 'Map Points', headers: ['id', 'name', 'category', 'lat', 'lng', 'note', 'addedBy', 'createdAt'] },
-  suggestion: { name: 'Ideas', headers: ['id', 'dayId', 'text', 'by', 'votes', 'createdAt'] },
+  // 'time' is last on purpose: new columns go on the end so existing rows keep their positions.
+  suggestion: { name: 'Ideas', headers: ['id', 'dayId', 'text', 'by', 'votes', 'createdAt', 'time'] },
   expense: { name: 'Trip Expenses', headers: ['id', 'what', 'by', 'amount', 'createdAt'] },
+  // One row per itinerary item id, holding the running net score. Rows appear on first vote.
+  planVote: { name: 'Plan Votes', headers: ['id', 'votes', 'createdAt'] },
 }
 
 const NUMERIC = ['lat', 'lng', 'dayId', 'votes', 'amount']
@@ -14,8 +17,21 @@ const getSheet = (kind) => {
     sheet = ss.insertSheet(spec.name)
     sheet.appendRow(spec.headers)
     sheet.setFrozenRows(1)
+    return sheet
   }
+  syncHeaders(sheet, spec)
   return sheet
+}
+
+// A tab created by an older version of this script is missing any column added since.
+// Fill the gap on the end so readAll and appendRow stay aligned with the spec.
+const syncHeaders = (sheet, spec) => {
+  const width = sheet.getLastColumn()
+  const current = width ? sheet.getRange(1, 1, 1, width).getValues()[0] : []
+  if (current.length >= spec.headers.length) return
+  const missing = spec.headers.slice(current.length)
+  sheet.getRange(1, current.length + 1, 1, missing.length).setValues([missing])
+  sheet.setFrozenRows(1)
 }
 
 const readAll = (kind) => {
@@ -36,6 +52,7 @@ const snapshot = () => ({
   pins: readAll('pin'),
   suggestions: readAll('suggestion'),
   expenses: readAll('expense'),
+  planVotes: readAll('planVote'),
 })
 
 const json = (payload) =>
@@ -75,7 +92,11 @@ const buildRecord = (kind, body) => {
       by: clamp(body.by || 'anonymous', 60),
       votes: 1,
       createdAt: now,
+      time: clamp(body.time, 10),
     }
+  }
+  if (kind === 'planVote') {
+    return { id: clamp(body.id, 60), votes: 0, createdAt: now }
   }
   return {
     id: body.id || Utilities.getUuid(),
@@ -89,13 +110,18 @@ const buildRecord = (kind, body) => {
 const isValid = (kind, record) => {
   if (kind === 'pin') return record.name && isFinite(record.lat) && isFinite(record.lng)
   if (kind === 'suggestion') return record.text && isFinite(record.dayId)
+  if (kind === 'planVote') return Boolean(record.id)
   return record.what && isFinite(record.amount) && record.amount > 0
 }
 
 const doPost = (e) => {
   const lock = LockService.getScriptLock()
-  lock.waitLock(20000)
+  let held = false
   try {
+    // Inside the try: a lock timeout throws, and outside it that escapes doPost as an HTML
+    // error page, which the client tries to parse as JSON and reports as a syntax error.
+    lock.waitLock(20000)
+    held = true
     const body = JSON.parse(e.postData.contents)
     const kind = body.kind
     if (!TABS[kind]) return json({ ok: false, error: 'unknown kind: ' + kind })
@@ -109,11 +135,24 @@ const doPost = (e) => {
     }
 
     if (body.action === 'vote') {
-      const row = findRow(sheet, body.id)
-      if (!row) return json({ ok: false, error: 'not found' })
-      const column = TABS.suggestion.headers.indexOf('votes') + 1
+      // Clients send the swing, not the new position, so switching sides arrives as -2 or +2.
+      const delta = Math.max(-2, Math.min(2, Math.round(Number(body.delta))))
+      if (!delta) return json(snapshot())
+
+      const column = TABS[kind].headers.indexOf('votes') + 1
+      let row = findRow(sheet, body.id)
+
+      if (!row) {
+        // Itinerary rows have no sheet row until someone votes on one.
+        if (kind !== 'planVote') return json({ ok: false, error: 'not found' })
+        const record = buildRecord(kind, body)
+        if (!isValid(kind, record)) return json({ ok: false, error: 'missing required fields' })
+        sheet.appendRow(TABS[kind].headers.map((header) => record[header]))
+        row = sheet.getLastRow()
+      }
+
       const cell = sheet.getRange(row, column)
-      cell.setValue(Number(cell.getValue()) + 1)
+      cell.setValue(Number(cell.getValue() || 0) + delta)
       return json(snapshot())
     }
 
@@ -124,6 +163,6 @@ const doPost = (e) => {
   } catch (err) {
     return json({ ok: false, error: String(err) })
   } finally {
-    lock.releaseLock()
+    if (held) lock.releaseLock()
   }
 }

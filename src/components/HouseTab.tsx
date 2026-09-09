@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type CSSProperties } from 'react'
 import { driveTimes, listing, roster, stay, trip } from '../data/trip'
 
 export const HouseTab = () => {
@@ -16,7 +16,7 @@ export const HouseTab = () => {
           <img src={listing.images[photo]} alt={`${listing.title}, photo ${photo + 1}`} />
           <button
             className="x-btn"
-            onClick={() => setPhoto((photo + listing.images.length - 1) % listing.images.length)}
+            onClick={() => setPhoto((current) => (current + listing.images.length - 1) % listing.images.length)}
             aria-label="Previous photo"
             style={navStyle('left')}
           >
@@ -24,7 +24,7 @@ export const HouseTab = () => {
           </button>
           <button
             className="x-btn"
-            onClick={() => setPhoto((photo + 1) % listing.images.length)}
+            onClick={() => setPhoto((current) => (current + 1) % listing.images.length)}
             aria-label="Next photo"
             style={navStyle('right')}
           >
@@ -132,7 +132,7 @@ export const HouseTab = () => {
   )
 }
 
-const navStyle = (side: 'left' | 'right'): React.CSSProperties => ({
+const navStyle = (side: 'left' | 'right'): CSSProperties => ({
   position: 'absolute',
   top: '50%',
   [side]: 10,

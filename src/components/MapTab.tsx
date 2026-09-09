@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { categories, type PinCategory } from '../data/trip'
@@ -39,19 +39,16 @@ interface MapTabProps {
   state: TripState
   who: string
   onWho: (name: string) => void
-  visible: boolean
   onAdd: (pin: Omit<Pin, 'id'>) => void
   onRemove: (id: string) => void
 }
 
-export const MapTab = ({ state, who, onWho, visible, onAdd, onRemove }: MapTabProps) => {
+export const MapTab = ({ state, who, onWho, onAdd, onRemove }: MapTabProps) => {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<L.Map | null>(null)
   const layerRef = useRef<L.LayerGroup | null>(null)
   const markersRef = useRef<Record<string, L.Marker>>({})
   const pendingRef = useRef<L.Marker | null>(null)
-  const refreshRef = useRef<(() => boolean) | null>(null)
-  const sizedRef = useRef(false)
 
   const [filters, setFilters] = useState<Record<PinCategory, boolean>>(
     () => Object.fromEntries(categoryKeys.map((key) => [key, true])) as Record<PinCategory, boolean>
@@ -77,52 +74,21 @@ export const MapTab = ({ state, who, onWho, visible, onAdd, onRemove }: MapTabPr
     layerRef.current = L.layerGroup().addTo(map)
     mapRef.current = map
 
-    const refresh = () => {
-      if (!containerRef.current?.clientWidth) return false
-      map.invalidateSize()
-      map.setView(INITIAL_CENTER, INITIAL_ZOOM)
-      return true
-    }
-    refreshRef.current = refresh
-
+    // The Map pane is display:none until its tab is picked, so Leaflet lays the map out
+    // against a 0x0 box and renders blank. One ResizeObserver covers it: it fires when the
+    // pane is revealed and on every resize after, and invalidateSize keeps the centre.
     const resizeObserver = new ResizeObserver(() => map.invalidateSize())
     resizeObserver.observe(containerRef.current)
 
-    const intersectionObserver = new IntersectionObserver((entries) => {
-      if (entries.some((entry) => entry.isIntersecting) && !sizedRef.current) {
-        sizedRef.current = refresh()
-      }
-    })
-    intersectionObserver.observe(containerRef.current)
-
-    let attempts = 0
-    const poll = window.setInterval(() => {
-      attempts += 1
-      if (sizedRef.current || attempts > 20) {
-        window.clearInterval(poll)
-        return
-      }
-      sizedRef.current = refresh()
-    }, 100)
-
     return () => {
-      window.clearInterval(poll)
       resizeObserver.disconnect()
-      intersectionObserver.disconnect()
       map.remove()
       mapRef.current = null
-      refreshRef.current = null
-      sizedRef.current = false
+      layerRef.current = null
+      markersRef.current = {}
+      pendingRef.current = null
     }
   }, [])
-
-  useEffect(() => {
-    if (!visible) return
-    requestAnimationFrame(() => {
-      if (!sizedRef.current) sizedRef.current = Boolean(refreshRef.current?.())
-      else mapRef.current?.invalidateSize()
-    })
-  }, [visible])
 
   useEffect(() => {
     const map = mapRef.current
@@ -137,20 +103,25 @@ export const MapTab = ({ state, who, onWho, visible, onAdd, onRemove }: MapTabPr
     }
   }, [adding])
 
+  // The markers and the side list are the same set, drawn twice. Deriving it once keeps a
+  // filter change from ever showing a pin in one place and not the other.
+  const shown = useMemo(
+    () => state.pins.filter((pin) => filters[pin.category]),
+    [state.pins, filters]
+  )
+
   useEffect(() => {
     const layer = layerRef.current
     if (!layer) return
     layer.clearLayers()
     markersRef.current = {}
-    state.pins
-      .filter((pin) => filters[pin.category])
-      .forEach((pin) => {
-        const marker = L.marker([pin.lat, pin.lng], { icon: markerIcon(categories[pin.category].color) })
-          .bindPopup(popupHtml(pin))
-          .addTo(layer)
-        markersRef.current[pin.id] = marker
-      })
-  }, [state.pins, filters])
+    shown.forEach((pin) => {
+      const marker = L.marker([pin.lat, pin.lng], { icon: markerIcon(categories[pin.category].color) })
+        .bindPopup(popupHtml(pin))
+        .addTo(layer)
+      markersRef.current[pin.id] = marker
+    })
+  }, [shown])
 
   useEffect(() => {
     const map = mapRef.current
@@ -189,8 +160,6 @@ export const MapTab = ({ state, who, onWho, visible, onAdd, onRemove }: MapTabPr
     mapRef.current?.flyTo([pin.lat, pin.lng], 12, { duration: 0.6 })
     markersRef.current[pin.id]?.openPopup()
   }
-
-  const shown = state.pins.filter((pin) => filters[pin.category])
 
   return (
     <div className="section-pad">
@@ -265,7 +234,7 @@ export const MapTab = ({ state, who, onWho, visible, onAdd, onRemove }: MapTabPr
               <button
                 key={key}
                 className={filters[key] ? 'chip on' : 'chip'}
-                onClick={() => setFilters({ ...filters, [key]: !filters[key] })}
+                onClick={() => setFilters((current) => ({ ...current, [key]: !current[key] }))}
                 aria-pressed={filters[key]}
               >
                 <span className="sq" style={{ background: categories[key].color }} />

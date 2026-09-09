@@ -10,7 +10,7 @@ with the chunky 2px-outline and hard-shadow treatment, Public Sans and Spline Sa
 
 | Tab | Contents |
 | --- | --- |
-| Days | One day at a time. Collapsed itinerary rows that open on tap, plus per-day ideas anyone can post and upvote |
+| Days | One day at a time. Collapsed itinerary rows that open on tap, each with an up/down vote, plus per-day ideas anyone can post with a time and vote on |
 | Map | Every known spot pinned, filterable by category. Anyone can drop their own |
 | House | The listing, drive times from the front door, who lands when, and the weather reality check |
 | Money | Receipt log and automatic settle-up across the four parties |
@@ -22,7 +22,14 @@ spreadsheet into `src/data/trip.ts`. It does not sync live: the sheet uses merge
 several stacked tables, so parsing it at runtime would be fragile. When the sheet changes,
 update `src/data/trip.ts`.
 
-Everything the group adds — pins, ideas, votes, expenses — does sync, to three tabs on the
+Every known spot lives once, in `places`. The map pins (`seedPins`) and the House tab's drive
+list (`driveTimes`) are both derived from it, so adding, editing or dropping a spot is one edit
+instead of three. A place with no `lat`/`lng` is drive-list only, which is how Livingston gets a
+line without putting a second marker on top of the Oktoberfest pin. A place with no `drive` is
+map only, which is how the restaurants stay off a list meant for landmarks. `drive.minutes`
+orders that list and nothing else.
+
+Everything the group adds — pins, ideas, votes, expenses — does sync, to four tabs on the
 same spreadsheet via a Google Apps Script Web App. See
 [`apps-script/README.md`](apps-script/README.md) to connect it. Until that is set up the site
 works, but additions save per browser and the page says so.
@@ -39,6 +46,10 @@ works, but additions save per browser and the page says so.
   per-party shares from the sheet, so everyone starts even. The payer is derived from the
   member picker rather than typed, because a free-text payer who is not on the roster breaks
   the settle-up: their credit vanishes and balances stop summing to zero.
+- The four Airbnb rows are **seeds, like the map's seed pins**: always present, never
+  deletable, and prepended to whatever the sheet holds rather than replaced by it. They have
+  no sheet row behind them, so a delete would no-op server-side and the row would return on
+  the next load.
 
 ## Identity
 
@@ -56,9 +67,28 @@ That also drives the money. Members map to the parties on the sheet:
 | Liv & Joe | Liv, Joe |
 | Jord Fam | Jordan, Tim |
 
-Picking who you are is enough to log an expense, since the paying party is derived. Note the
-Han & Mal and Liv & Joe pairings come straight from the sheet's own party names; the other two
-are inferred from first names and are worth a sanity check.
+Picking who you are is enough to log an expense, since the paying party is derived. The sheet
+names parties, never people, so `members` is the only record of who is in each one. Han & Mal
+and Liv & Joe fall out of the sheet's own party names; `Natalie` and `Jordan` expand `Nat` and
+`Jord`; `Gordy` and `Tim` were added by hand and are confirmed correct. Do not "fix" them back
+to something sheet-derived.
+
+`Bozeman airport · 1 hr` is the one drive time the sheet does not state. Everything else in
+`places` carries a distance the sheet gives explicitly.
+
+### Voting
+
+Itinerary rows and posted ideas both take one vote per person: up, down, or neither. Pressing
+the arrow you already chose clears it, and switching sides is a single swing.
+
+The client never sends its new position, only the difference, and the sheet adds that to the
+running total. So switching from up to down arrives as `-2`. That keeps the sheet a single
+integer per item instead of a row per person per item, at the cost of trusting the client to
+report its own swing honestly. Where each browser stands is kept in `localStorage` under
+`pv-trip-votes-v2`, so clearing site data lets the same person vote again.
+
+Itinerary rows are voted on by the stable `id` in `src/data/trip.ts`, not by position. Renaming
+an item is safe, changing its `id` orphans its votes.
 
 ## Deliberate deviations from the handoff
 
@@ -101,8 +131,10 @@ repository means changing it there and in `homepage` in `package.json`.
 Vite, React 18, TypeScript, and Leaflet 1.9.4 with Esri World Topo tiles, falling back to
 OpenStreetMap on tile errors. No API keys.
 
-The Map panel is hidden at load, so Leaflet would otherwise initialize against a 0x0 container
-and render blank. `MapTab` guards that the way the handoff prescribes: an `IntersectionObserver`,
-a short poll, and an `invalidateSize()` plus `setView()` on `requestAnimationFrame` the first
-time the tab is revealed. Verified: the container really is 0px wide before reveal and 412x320
-after.
+The Map panel is `display: none` at load, so Leaflet would otherwise initialize against a 0x0
+container and render blank. A single `ResizeObserver` on the canvas covers it: the reveal is
+itself a resize from 0x0, so it fires then and on every resize after, and `invalidateSize()`
+keeps the centre. The handoff prescribes an `IntersectionObserver` plus a short poll plus a
+`requestAnimationFrame` pass on first reveal as well; all three are the same one call at a
+different moment, so they were dropped. Verified in Chrome: the container is 0px wide before
+reveal and 776x640 after, with all 13 markers drawn.
