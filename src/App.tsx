@@ -1,18 +1,20 @@
 import { useEffect, useState } from 'react'
-import { members } from './data/trip'
 import { Header } from './components/Header'
 import { TabBar, type Tab } from './components/TabBar'
 import { DaysTab } from './components/DaysTab'
 import { MapTab } from './components/MapTab'
 import { HouseTab } from './components/HouseTab'
 import { MoneyTab } from './components/MoneyTab'
+import { WhoModal } from './components/WhoModal'
 import {
   addExpense,
+  addNote,
   addPin,
   addSuggestion,
   isSheetConfigured,
   loadState,
   removeExpense,
+  removeNote,
   removePin,
   seedState,
   USER_KEY,
@@ -41,7 +43,9 @@ const readStored = (key: string, fallback: string) => {
 export const App = () => {
   const [tab, setTab] = useState<Tab>('days')
   const [state, setState] = useState<TripState>(seedState)
-  const [who, setWho] = useState(() => readStored(USER_KEY, members[0].name))
+  // Empty means nobody has said who they are yet, which is what opens the picker modal.
+  // Defaulting to a real member instead would silently post everything as that person.
+  const [who, setWho] = useState(() => readStored(USER_KEY, ''))
   const [votes, setVotes] = useState<Record<string, VoteDir>>(() => {
     try {
       return JSON.parse(readStored(VOTED_KEY, '{}'))
@@ -58,10 +62,11 @@ export const App = () => {
   }, [])
 
   useEffect(() => {
+    if (!who) return
     try {
       localStorage.setItem(USER_KEY, who)
     } catch {
-      // A blocked localStorage means the picker resets next visit, nothing worse.
+      // A blocked localStorage means the modal asks again next visit, nothing worse.
     }
   }, [who])
 
@@ -100,7 +105,12 @@ export const App = () => {
   }
 
   return (
-    <div className="app">
+    // A full-page overlay rather than part of the app layout, so it sits outside .app and
+    // owns the top of the stacking order instead of competing inside .app's.
+    <>
+      {!who && <WhoModal onPick={setWho} />}
+
+      <div className="app">
       <div className="layout">
         <div className="sidebar">
           <Header />
@@ -117,8 +127,8 @@ export const App = () => {
           {!isSheetConfigured() && !error && (
             <div className="section-pad" style={{ paddingBottom: 0 }}>
               <p className="sync-note">
-                Not connected to the trip sheet yet, so ideas, votes, pins and expenses save on this
-                device only. Nobody else sees them until it is hooked up.
+                Not connected to the trip sheet yet, so ideas, notes, votes, pins and expenses save
+                on this device only. Nobody else sees them until it is hooked up.
               </p>
             </div>
           )}
@@ -134,6 +144,8 @@ export const App = () => {
                 castVote(id, next, (delta) => voteSuggestion(state, id, delta))
               }
               onPlanVote={(id, next) => castVote(id, next, (delta) => votePlan(state, id, delta))}
+              onAddNote={(itemId, text) => run(addNote(state, { itemId, text, by: who }))}
+              onRemoveNote={(id) => run(removeNote(state, id))}
             />
           </div>
 
@@ -162,6 +174,7 @@ export const App = () => {
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </>
   )
 }

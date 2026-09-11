@@ -3,6 +3,8 @@ const TABS = {
   // 'time' is last on purpose: new columns go on the end so existing rows keep their positions.
   suggestion: { name: 'Ideas', headers: ['id', 'dayId', 'text', 'by', 'votes', 'createdAt', 'time'] },
   expense: { name: 'Trip Expenses', headers: ['id', 'what', 'by', 'amount', 'createdAt'] },
+  // Free-text comments on a fixed itinerary row. 'itemId' is the stable id in src/data/trip.ts.
+  note: { name: 'Item Notes', headers: ['id', 'itemId', 'text', 'by', 'createdAt'] },
   // One row per itinerary item id, holding the running net score. Rows appear on first vote.
   planVote: { name: 'Plan Votes', headers: ['id', 'votes', 'createdAt'] },
 }
@@ -51,6 +53,7 @@ const snapshot = () => ({
   ok: true,
   pins: readAll('pin'),
   suggestions: readAll('suggestion'),
+  notes: readAll('note'),
   expenses: readAll('expense'),
   planVotes: readAll('planVote'),
 })
@@ -95,6 +98,15 @@ const buildRecord = (kind, body) => {
       time: clamp(body.time, 10),
     }
   }
+  if (kind === 'note') {
+    return {
+      id: body.id || Utilities.getUuid(),
+      itemId: clamp(body.itemId, 60),
+      text: clamp(body.text, 500),
+      by: clamp(body.by || 'anonymous', 60),
+      createdAt: now,
+    }
+  }
   if (kind === 'planVote') {
     return { id: clamp(body.id, 60), votes: 0, createdAt: now }
   }
@@ -110,6 +122,7 @@ const buildRecord = (kind, body) => {
 const isValid = (kind, record) => {
   if (kind === 'pin') return record.name && isFinite(record.lat) && isFinite(record.lng)
   if (kind === 'suggestion') return record.text && isFinite(record.dayId)
+  if (kind === 'note') return record.itemId && record.text
   if (kind === 'planVote') return Boolean(record.id)
   return record.what && isFinite(record.amount) && record.amount > 0
 }

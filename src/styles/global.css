@@ -224,6 +224,11 @@ button {
   border-radius: 16px;
   padding: 14px 16px;
   box-shadow: 3px 3px 0 var(--line);
+}
+
+/* The toggle and the vote control share one line. What the toggle reveals stacks under
+   both, outside the <button>, so it can hold the note input and its own buttons. */
+.item-head {
   display: flex;
   gap: 13px;
   align-items: flex-start;
@@ -263,7 +268,7 @@ button {
 }
 
 .item-detail {
-  margin-top: 6px;
+  display: block;
   font: 400 13.5px/1.55 var(--sans);
   color: var(--slate);
 }
@@ -300,6 +305,74 @@ button {
   flex: none;
   font: 700 13px var(--sans);
   color: var(--sage);
+}
+
+/* 58px time column + the 13px .item-head gap, so revealed content lines up under the title. */
+.item-expand {
+  padding-left: 71px;
+  margin-top: 6px;
+}
+
+/* Without it a row with notes looks identical to one without until you open it. */
+.note-count {
+  flex: none;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--straw);
+  color: var(--slate);
+  font: 700 10.5px/1.6 var(--mono);
+}
+
+.notes {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.note {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  background: var(--straw);
+  border-radius: 11px;
+  padding: 9px 11px;
+}
+
+.note-text {
+  display: block;
+  font: 400 13px/1.45 var(--sans);
+  color: var(--body);
+}
+
+.note-by {
+  display: block;
+  margin-top: 3px;
+  font: 600 10.5px var(--mono);
+  color: var(--muted);
+}
+
+.note-add {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.note-add .pill-input {
+  padding: 9px 13px;
+  font-size: 13px;
+}
+
+.note-add .btn-forest {
+  padding: 9px 15px;
+  font-size: 12.5px;
+}
+
+.note-as {
+  margin: 6px 0 0;
+  font: 600 10.5px var(--mono);
+  color: var(--muted);
 }
 
 .dashed {
@@ -830,6 +903,87 @@ button {
   margin: 6px 0 0;
   font: 400 13.5px/1.5 var(--sans);
   color: var(--slate);
+}
+
+.modal-scrim {
+  position: fixed;
+  inset: 0;
+  /* over .tabbar, which sits at 40 */
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(22, 39, 14, 0.72);
+}
+
+.modal {
+  width: 100%;
+  max-width: 420px;
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+  background: var(--field);
+  border: 2px solid var(--ink);
+  border-radius: 18px;
+  box-shadow: 4px 4px 0 var(--ink);
+  padding: 22px;
+}
+
+.modal .eyebrow {
+  color: var(--muted);
+}
+
+.modal h2 {
+  margin: 8px 0 0;
+  font: 800 24px/1.15 var(--sans);
+  letter-spacing: -0.02em;
+}
+
+.modal p {
+  margin: 8px 0 0;
+  font: 400 13.5px/1.5 var(--sans);
+  color: var(--slate);
+}
+
+.who-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.who-choice {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 11px 13px;
+  border: 2px solid var(--ink);
+  border-radius: 13px;
+  background: var(--paper);
+  text-align: left;
+}
+
+.who-choice:hover {
+  background: var(--forest);
+}
+
+.who-choice:hover .who-name {
+  color: var(--field);
+}
+
+.who-choice:hover .who-party {
+  color: var(--on-dark-label);
+}
+
+.who-name {
+  font: 700 14.5px var(--sans);
+  color: var(--ink);
+}
+
+.who-party {
+  font: 600 10.5px var(--mono);
+  color: var(--muted);
 }
 
 .sync-note {

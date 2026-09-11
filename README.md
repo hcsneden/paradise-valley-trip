@@ -10,7 +10,7 @@ with the chunky 2px-outline and hard-shadow treatment, Public Sans and Spline Sa
 
 | Tab | Contents |
 | --- | --- |
-| Days | One day at a time. Collapsed itinerary rows that open on tap, each with an up/down vote, plus per-day ideas anyone can post with a time and vote on |
+| Days | One day at a time. Collapsed itinerary rows that open on tap, each with an up/down vote and its own notes thread, plus per-day ideas anyone can post with a time and vote on |
 | Map | Every known spot pinned, filterable by category. Anyone can drop their own |
 | House | The listing, drive times from the front door, who lands when, and the weather reality check |
 | Money | Receipt log and automatic settle-up across the four parties |
@@ -29,8 +29,8 @@ line without putting a second marker on top of the Oktoberfest pin. A place with
 map only, which is how the restaurants stay off a list meant for landmarks. `drive.minutes`
 orders that list and nothing else.
 
-Everything the group adds — pins, ideas, votes, expenses — does sync, to four tabs on the
-same spreadsheet via a Google Apps Script Web App. See
+Everything the group adds — pins, ideas, notes, votes, expenses — does sync, to five tabs on
+the same spreadsheet via a Google Apps Script Web App. See
 [`apps-script/README.md`](apps-script/README.md) to connect it. Until that is set up the site
 works, but additions save per browser and the page says so.
 
@@ -57,6 +57,17 @@ The revised handoff removes the header's free-text "You are ___" field and says 
 should attribute everything to a signed-in user. There is no auth here and building it is out
 of scope, so attribution comes from a **member picker** instead: pick which of the eight
 travellers you are, and the choice sticks in `localStorage` and follows you across tabs.
+
+On a first visit nothing is stored under that key yet, so the site opens on a modal asking who
+you are before anything else. Without it the picker has to default to somebody, and everything
+posted before you notice the picker lands under that person's name, billed to that person's
+family. The modal renders outside `.app` as a full-page overlay rather than part of the app
+layout.
+
+Note that `.app`'s `container-type: inline-size` does *not* trap fixed descendants: a
+`position: fixed` element inside `.app` measures the full viewport, which is why the phone tab
+bar pins correctly from inside it. Verified in Chrome with `.app` constrained to 414px, where
+a fixed child still measured 1512x738.
 
 That also drives the money. Members map to the parties on the sheet:
 
@@ -89,6 +100,17 @@ report its own swing honestly. Where each browser stands is kept in `localStorag
 
 Itinerary rows are voted on by the stable `id` in `src/data/trip.ts`, not by position. Renaming
 an item is safe, changing its `id` orphans its votes.
+
+### Notes
+
+Any itinerary row takes free-text notes, attributed to whoever the member picker says you are
+and shown when the row is expanded. A collapsed row with notes carries a count so you can tell
+which rows have been talked about without opening all of them. Notes are keyed to the same
+stable item `id` as the votes, so changing an `id` orphans its notes as well.
+
+Notes are a plain comment thread on purpose. Ideas already carry votes, and a row's own vote
+already measures whether people want to do it, so a second voted list on the same row would be
+two ways to say the same thing.
 
 ## Deliberate deviations from the handoff
 

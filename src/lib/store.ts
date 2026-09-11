@@ -23,6 +23,14 @@ export interface Suggestion {
   votes: number
 }
 
+/** A free-text comment on one fixed itinerary row, keyed by its id in `data/trip.ts`. */
+export interface Note {
+  id: string
+  itemId: string
+  text: string
+  by: string
+}
+
 export interface Expense {
   id: string
   what: string
@@ -34,6 +42,7 @@ export interface Expense {
 export interface TripState {
   pins: Pin[]
   suggestions: Suggestion[]
+  notes: Note[]
   expenses: Expense[]
   planVotes: Record<string, number>
 }
@@ -60,6 +69,7 @@ export const isSheetConfigured = () => SHEET_ENDPOINT.length > 0
 export const seedState = (): TripState => ({
   pins: seedPins.map((pin) => ({ ...pin, addedBy: '', seed: true })),
   suggestions: [],
+  notes: [],
   expenses: seedExpenses.map((expense) => ({ ...expense, seed: true })),
   planVotes: {},
 })
@@ -72,6 +82,7 @@ const readLocal = (): TripState => {
     return {
       pins: [...seeded.pins, ...(saved.pins ?? [])],
       suggestions: saved.suggestions ?? [],
+      notes: saved.notes ?? [],
       expenses: [...seeded.expenses, ...(saved.expenses ?? [])],
       planVotes: saved.planVotes ?? {},
     }
@@ -87,6 +98,7 @@ const writeLocal = (state: TripState) => {
       JSON.stringify({
         pins: state.pins.filter((pin) => !pin.seed),
         suggestions: state.suggestions,
+        notes: state.notes,
         expenses: state.expenses.filter((expense) => !expense.seed),
         planVotes: state.planVotes,
       })
@@ -102,6 +114,7 @@ const merge = (remote: Partial<TripState> & { planVotes?: PlanVote[] | Record<st
   return {
     pins: [...seeded.pins, ...(remote.pins ?? [])],
     suggestions: remote.suggestions ?? [],
+    notes: remote.notes ?? [],
     // Seeds are prepended, never swapped out: the Airbnb shares are real money that
     // stays on the books once somebody logs their first coffee.
     expenses: [...seeded.expenses, ...(remote.expenses ?? [])],
@@ -194,6 +207,19 @@ export const votePlan = async (
   return localMutate(state, {
     planVotes: { ...state.planVotes, [id]: (state.planVotes[id] ?? 0) + delta },
   })
+}
+
+export const addNote = async (
+  state: TripState,
+  note: Omit<Note, 'id'>
+): Promise<TripState> => {
+  if (isSheetConfigured()) return post({ kind: 'note', action: 'add', ...note })
+  return localMutate(state, { notes: [...state.notes, { ...note, id: newId() }] })
+}
+
+export const removeNote = async (state: TripState, id: string): Promise<TripState> => {
+  if (isSheetConfigured()) return post({ kind: 'note', action: 'delete', id })
+  return localMutate(state, { notes: state.notes.filter((note) => note.id !== id) })
 }
 
 export const addExpense = async (

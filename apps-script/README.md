@@ -1,15 +1,16 @@
 # Sheets backend
 
-Everything the group adds — map pins, ideas, votes and expenses — lives on the trip
+Everything the group adds — map pins, ideas, notes, votes and expenses — lives on the trip
 spreadsheet. A static site cannot write to Google Sheets directly, so `Code.gs` is deployed
 as a Google Apps Script Web App that sits in front of the sheet.
 
-It creates and manages four tabs, so nothing you already have on the sheet is touched:
+It creates and manages five tabs, so nothing you already have on the sheet is touched:
 
 | Tab | Holds |
 | --- | --- |
 | `Map Points` | pins people drop on the map |
 | `Ideas` | per-day suggestions, the time they are proposed for, and their vote counts |
+| `Item Notes` | free-text comments on a fixed itinerary row, one row per note |
 | `Trip Expenses` | the receipt log behind the settle-up math |
 | `Plan Votes` | the running score on each fixed itinerary row, one row per item, created on first vote |
 
@@ -29,7 +30,7 @@ from the flat log this script reads and writes.
 8. Paste that URL into `src/lib/store.ts` as `SHEET_ENDPOINT`, then commit, push and redeploy.
 
 "Who has access: Anyone" means anyone holding the URL can post. It does not expose the rest
-of the spreadsheet, only the four tabs above, and only through the operations in `Code.gs`.
+of the spreadsheet, only the five tabs above, and only through the operations in `Code.gs`.
 
 ## Changing columns
 

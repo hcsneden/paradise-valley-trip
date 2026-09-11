@@ -12,6 +12,8 @@ interface DaysTabProps {
   onAdd: (dayId: number, text: string, time: string) => void
   onVote: (id: string, next: VoteDir) => void
   onPlanVote: (id: string, next: VoteDir) => void
+  onAddNote: (itemId: string, text: string) => void
+  onRemoveNote: (id: string) => void
 }
 
 /** '14:30' off the time input, '2:30 pm' on the page. */
@@ -23,11 +25,22 @@ const formatTime = (value: string) => {
   return `${hour % 12 === 0 ? 12 : hour % 12}:${minute} ${suffix}`
 }
 
-export const DaysTab = ({ state, who, onWho, votes, onAdd, onVote, onPlanVote }: DaysTabProps) => {
+export const DaysTab = ({
+  state,
+  who,
+  onWho,
+  votes,
+  onAdd,
+  onVote,
+  onPlanVote,
+  onAddNote,
+  onRemoveNote,
+}: DaysTabProps) => {
   const [dayId, setDayId] = useState(1)
   const [open, setOpen] = useState<Record<string, boolean>>({})
   const [draft, setDraft] = useState('')
   const [draftTime, setDraftTime] = useState('')
+  const [noteDrafts, setNoteDrafts] = useState<Record<string, string>>({})
 
   const day = days.find((entry) => entry.id === dayId)!
   const suggestions = state.suggestions
@@ -39,6 +52,13 @@ export const DaysTab = ({ state, who, onWho, votes, onAdd, onVote, onPlanVote }:
     onAdd(dayId, draft.trim(), draftTime)
     setDraft('')
     setDraftTime('')
+  }
+
+  const submitNote = (itemId: string) => {
+    const text = (noteDrafts[itemId] ?? '').trim()
+    if (!text) return
+    onAddNote(itemId, text)
+    setNoteDrafts((current) => ({ ...current, [itemId]: '' }))
   }
 
   return (
@@ -66,33 +86,87 @@ export const DaysTab = ({ state, who, onWho, votes, onAdd, onVote, onPlanVote }:
       <div className="rows">
         {day.items.map((item) => {
           const expanded = Boolean(open[item.id])
+          const notes = state.notes.filter((note) => note.itemId === item.id)
+          const noteDraft = noteDrafts[item.id] ?? ''
           return (
             <div key={item.id} className="item-row">
-              <button
-                className="item-toggle"
-                onClick={() => setOpen((current) => ({ ...current, [item.id]: !expanded }))}
-                aria-expanded={expanded}
-              >
-                <span className="item-time">{item.time}</span>
-                <span className="item-body">
-                  <span className="item-title">{item.title}</span>
-                  {expanded && (
-                    <>
-                      <span className="item-detail" style={{ display: 'block' }}>
-                        {item.detail}
-                      </span>
-                      {item.tag && <span className={`tag ${item.tagTone ?? 'trail'}`}>{item.tag}</span>}
-                    </>
+              <div className="item-head">
+                <button
+                  className="item-toggle"
+                  onClick={() => setOpen((current) => ({ ...current, [item.id]: !expanded }))}
+                  aria-expanded={expanded}
+                  aria-controls={expanded ? `${item.id}-detail` : undefined}
+                >
+                  <span className="item-time">{item.time}</span>
+                  <span className="item-body">
+                    <span className="item-title">{item.title}</span>
+                  </span>
+                  {!expanded && notes.length > 0 && (
+                    <span
+                      className="note-count"
+                      aria-label={`${notes.length} note${notes.length === 1 ? '' : 's'}`}
+                    >
+                      {notes.length}
+                    </span>
                   )}
-                </span>
-                <span className="chev">{expanded ? '▲' : '▼'}</span>
-              </button>
-              <VoteControl
-                score={state.planVotes[item.id] ?? 0}
-                mine={votes[item.id] ?? 0}
-                label={item.title}
-                onVote={(next) => onPlanVote(item.id, next)}
-              />
+                  <span className="chev">{expanded ? '▲' : '▼'}</span>
+                </button>
+                <VoteControl
+                  score={state.planVotes[item.id] ?? 0}
+                  mine={votes[item.id] ?? 0}
+                  label={item.title}
+                  onVote={(next) => onPlanVote(item.id, next)}
+                />
+              </div>
+
+              {/* Outside the toggle button, which cannot legally hold the note input. */}
+              {expanded && (
+                <div className="item-expand" id={`${item.id}-detail`}>
+                  <span className="item-detail">{item.detail}</span>
+                  {item.tag && <span className={`tag ${item.tagTone ?? 'trail'}`}>{item.tag}</span>}
+
+                  {notes.length > 0 && (
+                    <div className="notes">
+                      {notes.map((note) => (
+                        <div key={note.id} className="note">
+                          <span style={{ flex: 1, minWidth: 0 }}>
+                            <span className="note-text">{note.text}</span>
+                            <span className="note-by">{note.by}</span>
+                          </span>
+                          <button
+                            className="x-btn"
+                            onClick={() => onRemoveNote(note.id)}
+                            aria-label={`Remove note from ${note.by}`}
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="note-add">
+                    <input
+                      className="pill-input"
+                      value={noteDraft}
+                      onChange={(event) =>
+                        setNoteDrafts((current) => ({ ...current, [item.id]: event.target.value }))
+                      }
+                      onKeyDown={(event) => event.key === 'Enter' && submitNote(item.id)}
+                      placeholder="Add a note…"
+                      aria-label={`Add a note to ${item.title}`}
+                    />
+                    <button
+                      className="btn-forest"
+                      onClick={() => submitNote(item.id)}
+                      disabled={!noteDraft.trim()}
+                    >
+                      Add
+                    </button>
+                  </div>
+                  <p className="note-as">as {who}</p>
+                </div>
+              )}
             </div>
           )
         })}
