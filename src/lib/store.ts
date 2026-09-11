@@ -1,15 +1,9 @@
-import { seedExpenses, seedPins, type PinCategory } from '../data/trip'
+import { seedExpenses, seedPins, type SeedPin } from '../data/trip'
 
 export const SHEET_ENDPOINT =
   'https://script.google.com/macros/s/AKfycbwGVEHui87PM0uCe7EF1d5-A6WCKCj61y0r06CcuoxeJjeOud2DoX6XjQoLemoM00B3yw/exec'
 
-export interface Pin {
-  id: string
-  name: string
-  category: PinCategory
-  lat: number
-  lng: number
-  note: string
+export interface Pin extends SeedPin {
   addedBy: string
   seed?: boolean
 }
@@ -50,19 +44,16 @@ export interface TripState {
 /** A person is up (+1), down (-1) or neutral (0) on any one item. */
 export type VoteDir = 1 | -1 | 0
 
-export interface PlanVote {
-  id: string
-  votes: number
+/** What the Apps Script returns: plan votes arrive as sheet rows, not a keyed map. */
+interface RemoteSnapshot {
+  pins?: Pin[]
+  suggestions?: Suggestion[]
+  notes?: Note[]
+  expenses?: Expense[]
+  planVotes?: { id: string; votes: number }[]
 }
 
-const asPlanVotes = (rows: PlanVote[] = []): Record<string, number> =>
-  rows.reduce<Record<string, number>>((acc, row) => {
-    acc[row.id] = Number(row.votes) || 0
-    return acc
-  }, {})
-
 const LOCAL_KEY = 'pv-trip-state-v3'
-export const USER_KEY = 'pv-trip-user'
 
 export const isSheetConfigured = () => SHEET_ENDPOINT.length > 0
 
@@ -108,9 +99,8 @@ const writeLocal = (state: TripState) => {
   }
 }
 
-const merge = (remote: Partial<TripState> & { planVotes?: PlanVote[] | Record<string, number> }): TripState => {
+const merge = (remote: RemoteSnapshot): TripState => {
   const seeded = seedState()
-  const votes = remote.planVotes
   return {
     pins: [...seeded.pins, ...(remote.pins ?? [])],
     suggestions: remote.suggestions ?? [],
@@ -118,7 +108,9 @@ const merge = (remote: Partial<TripState> & { planVotes?: PlanVote[] | Record<st
     // Seeds are prepended, never swapped out: the Airbnb shares are real money that
     // stays on the books once somebody logs their first coffee.
     expenses: [...seeded.expenses, ...(remote.expenses ?? [])],
-    planVotes: Array.isArray(votes) ? asPlanVotes(votes) : votes ?? {},
+    planVotes: Object.fromEntries(
+      (remote.planVotes ?? []).map((row) => [row.id, Number(row.votes) || 0])
+    ),
   }
 }
 
@@ -126,7 +118,7 @@ const merge = (remote: Partial<TripState> & { planVotes?: PlanVote[] | Record<st
  * Apps Script answers a failure with an HTML error page, not JSON, so the status has to
  * be checked before parsing or the user is shown a JSON syntax error instead of a reason.
  */
-const readJson = async (res: Response, fallback: string) => {
+const readJson = async (res: Response, fallback: string): Promise<RemoteSnapshot> => {
   if (!res.ok) throw new Error(`${fallback} (${res.status})`)
   const data = await res.json()
   if (!data.ok) throw new Error(data.error ?? fallback)
@@ -178,17 +170,14 @@ export const addSuggestion = async (
 }
 
 /**
- * Switching sides is a two-step swing (+1 to -1 is a delta of -2), so the caller
- * sends the difference rather than the new position and the sheet just adds it on.
+ * `delta` is the swing between the voter's old and new position (+1 to -1 is -2), so the
+ * sheet only ever adds to a running total. Callers skip the call when the swing is zero.
  */
-export const voteDelta = (previous: VoteDir, next: VoteDir) => next - previous
-
 export const voteSuggestion = async (
   state: TripState,
   id: string,
   delta: number
 ): Promise<TripState> => {
-  if (!delta) return state
   if (isSheetConfigured()) return post({ kind: 'suggestion', action: 'vote', id, delta })
   return localMutate(state, {
     suggestions: state.suggestions.map((suggestion) =>
@@ -202,7 +191,6 @@ export const votePlan = async (
   id: string,
   delta: number
 ): Promise<TripState> => {
-  if (!delta) return state
   if (isSheetConfigured()) return post({ kind: 'planVote', action: 'vote', id, delta })
   return localMutate(state, {
     planVotes: { ...state.planVotes, [id]: (state.planVotes[id] ?? 0) + delta },

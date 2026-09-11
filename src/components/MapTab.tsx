@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { categories, type PinCategory } from '../data/trip'
@@ -92,11 +92,9 @@ export const MapTab = ({ state, who, onWho, onAdd, onRemove }: MapTabProps) => {
 
   useEffect(() => {
     const map = mapRef.current
-    if (!map) return
-    const handler = (event: L.LeafletMouseEvent) => {
-      if (!adding) return
+    if (!map || !adding) return
+    const handler = (event: L.LeafletMouseEvent) =>
       setSpot({ lat: event.latlng.lat, lng: event.latlng.lng })
-    }
     map.on('click', handler)
     return () => {
       map.off('click', handler)
@@ -132,12 +130,12 @@ export const MapTab = ({ state, who, onWho, onAdd, onRemove }: MapTabProps) => {
     pendingRef.current = L.marker([spot.lat, spot.lng], { icon: markerIcon('#9A6B14') }).addTo(map)
   }, [spot])
 
-  const cancel = useCallback(() => {
+  const cancel = () => {
     setAdding(false)
     setSpot(null)
     setDraft(emptyDraft)
     setInvalid(false)
-  }, [])
+  }
 
   const save = () => {
     if (!spot) return
@@ -204,8 +202,8 @@ export const MapTab = ({ state, who, onWho, onAdd, onRemove }: MapTabProps) => {
               aria-label="Note"
             />
             <WhoPicker value={who} onChange={onWho} label="Added by" />
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button className="btn-forest" onClick={save} style={{ flex: 1 }}>
+            <div className="map-form-actions">
+              <button className="btn-forest" onClick={save}>
                 Drop it
               </button>
               <button className="btn-ghost" onClick={cancel}>
@@ -220,11 +218,7 @@ export const MapTab = ({ state, who, onWho, onAdd, onRemove }: MapTabProps) => {
             <span className="eyebrow" style={{ color: 'var(--slate)' }}>
               Spots · {shown.length}
             </span>
-            <button
-              className="btn-forest"
-              style={{ padding: '7px 13px', fontSize: 12.5 }}
-              onClick={() => (adding ? cancel() : setAdding(true))}
-            >
+            <button className="btn-forest small" onClick={() => (adding ? cancel() : setAdding(true))}>
               {adding ? 'Cancel' : '+ Add a spot'}
             </button>
           </div>
@@ -247,10 +241,10 @@ export const MapTab = ({ state, who, onWho, onAdd, onRemove }: MapTabProps) => {
             <p className="empty">No spots in these categories yet.</p>
           ) : (
             shown.map((pin) => (
-              <div key={pin.id} style={{ display: 'flex', alignItems: 'flex-start' }}>
+              <div key={pin.id} className="pin-line">
                 <button className="pin-row" onClick={() => flyTo(pin)}>
                   <span className="pin-dot" style={{ background: categories[pin.category].color }} />
-                  <span style={{ flex: 1, minWidth: 0 }}>
+                  <span className="grow">
                     <span className="pin-name">{pin.name}</span>
                     {pin.note && (
                       <span className="pin-note" style={{ display: 'block' }}>
@@ -263,7 +257,6 @@ export const MapTab = ({ state, who, onWho, onAdd, onRemove }: MapTabProps) => {
                 {!pin.seed && (
                   <button
                     className="x-btn"
-                    style={{ alignSelf: 'center', marginRight: 10 }}
                     onClick={() => onRemove(pin.id)}
                     aria-label={`Remove ${pin.name}`}
                   >

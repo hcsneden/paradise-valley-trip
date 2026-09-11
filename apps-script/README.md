@@ -46,6 +46,18 @@ values and read back with an empty time.
 **Deploy → Manage deployments → pencil icon → Version: New version → Deploy.**
 The URL stays the same.
 
+Pasting a newer `Code.gs` into the editor is not enough. The web app keeps serving the
+version that was deployed until a new version is published. A quick check: a GET on the
+web app URL should return `notes` and `planVotes` keys alongside `pins`, `suggestions` and
+`expenses`. If it does not, the deployment is behind this file and notes and plan votes
+will fail with `unknown kind` until it is redeployed.
+
+Text columns are set to plain text before each write so a typed time like `14:30` stays a
+string instead of becoming a sheet time, and a value starting with `=` is not treated as a
+formula. That has not been exercised against a live sheet yet. After redeploying, post an
+idea with a time and an idea whose text is `=1+1`, then reload: the time should show on
+the idea and the text should read back literally.
+
 ## Known limits
 
 - **No realtime push.** The site loads the sheet once on open. Someone else's idea or pin

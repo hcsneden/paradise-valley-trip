@@ -6,6 +6,7 @@ import { MapTab } from './components/MapTab'
 import { HouseTab } from './components/HouseTab'
 import { MoneyTab } from './components/MoneyTab'
 import { WhoModal } from './components/WhoModal'
+import { members } from './data/trip'
 import {
   addExpense,
   addNote,
@@ -17,16 +18,13 @@ import {
   removeNote,
   removePin,
   seedState,
-  USER_KEY,
-  voteDelta,
   votePlan,
   voteSuggestion,
-  type Expense,
-  type Pin,
   type TripState,
   type VoteDir,
 } from './lib/store'
 
+const USER_KEY = 'pv-trip-user'
 // v2: the old key held booleans from the upvote-only days, which cannot express a downvote.
 const VOTED_KEY = 'pv-trip-votes-v2'
 
@@ -40,12 +38,18 @@ const readStored = (key: string, fallback: string) => {
   }
 }
 
+const isMember = (name: string) => members.some((member) => member.name === name)
+
 export const App = () => {
   const [tab, setTab] = useState<Tab>('days')
   const [state, setState] = useState<TripState>(seedState)
   // Empty means nobody has said who they are yet, which is what opens the picker modal.
   // Defaulting to a real member instead would silently post everything as that person.
-  const [who, setWho] = useState(() => readStored(USER_KEY, ''))
+  // A stored name that is no longer on the roster counts as nobody for the same reason.
+  const [who, setWho] = useState(() => {
+    const stored = readStored(USER_KEY, '')
+    return isMember(stored) ? stored : ''
+  })
   const [votes, setVotes] = useState<Record<string, VoteDir>>(() => {
     try {
       return JSON.parse(readStored(VOTED_KEY, '{}'))
@@ -85,8 +89,8 @@ export const App = () => {
     next: VoteDir,
     send: (delta: number) => Promise<TripState>
   ) => {
-    const previous = votes[id] ?? 0
-    const delta = voteDelta(previous, next)
+    // Switching sides is a two-step swing: +1 to -1 arrives at the sheet as -2.
+    const delta = next - (votes[id] ?? 0)
     if (!delta) return
     send(delta)
       .then((updated) => {
@@ -104,6 +108,12 @@ export const App = () => {
       .catch((err: Error) => setError(err.message))
   }
 
+  const notice =
+    error ??
+    (isSheetConfigured()
+      ? null
+      : 'Not connected to the trip sheet yet, so ideas, notes, votes, pins and expenses save on this device only. Nobody else sees them until it is hooked up.')
+
   return (
     // A full-page overlay rather than part of the app layout, so it sits outside .app and
     // owns the top of the stacking order instead of competing inside .app's.
@@ -111,69 +121,54 @@ export const App = () => {
       {!who && <WhoModal onPick={setWho} />}
 
       <div className="app">
-      <div className="layout">
-        <div className="sidebar">
-          <Header />
-          <TabBar tab={tab} onTab={setTab} />
-        </div>
+        <div className="layout">
+          <div className="sidebar">
+            <Header />
+            <TabBar tab={tab} onTab={setTab} />
+          </div>
 
-        <div className="main">
-          {error && (
-            <div className="section-pad" style={{ paddingBottom: 0 }}>
-              <p className="sync-note">{error}</p>
+          <div className="main">
+            {notice && <p className="sync-note">{notice}</p>}
+
+            <div className="pane pane-days" hidden={tab !== 'days'}>
+              <DaysTab
+                state={state}
+                who={who}
+                onWho={setWho}
+                votes={votes}
+                onAdd={(dayId, text, time) => run(addSuggestion(state, { dayId, text, time, by: who }))}
+                onVote={(id, next) => castVote(id, next, (delta) => voteSuggestion(state, id, delta))}
+                onPlanVote={(id, next) => castVote(id, next, (delta) => votePlan(state, id, delta))}
+                onAddNote={(itemId, text) => run(addNote(state, { itemId, text, by: who }))}
+                onRemoveNote={(id) => run(removeNote(state, id))}
+              />
             </div>
-          )}
 
-          {!isSheetConfigured() && !error && (
-            <div className="section-pad" style={{ paddingBottom: 0 }}>
-              <p className="sync-note">
-                Not connected to the trip sheet yet, so ideas, notes, votes, pins and expenses save
-                on this device only. Nobody else sees them until it is hooked up.
-              </p>
+            <div className="pane pane-map" hidden={tab !== 'map'}>
+              <MapTab
+                state={state}
+                who={who}
+                onWho={setWho}
+                onAdd={(pin) => run(addPin(state, pin))}
+                onRemove={(id) => run(removePin(state, id))}
+              />
             </div>
-          )}
 
-          <div className="pane pane-days" style={{ display: tab === 'days' ? 'block' : 'none' }}>
-            <DaysTab
-              state={state}
-              who={who}
-              onWho={setWho}
-              votes={votes}
-              onAdd={(dayId, text, time) => run(addSuggestion(state, { dayId, text, time, by: who }))}
-              onVote={(id, next) =>
-                castVote(id, next, (delta) => voteSuggestion(state, id, delta))
-              }
-              onPlanVote={(id, next) => castVote(id, next, (delta) => votePlan(state, id, delta))}
-              onAddNote={(itemId, text) => run(addNote(state, { itemId, text, by: who }))}
-              onRemoveNote={(id) => run(removeNote(state, id))}
-            />
-          </div>
+            <div className="pane pane-house" hidden={tab !== 'house'}>
+              <HouseTab />
+            </div>
 
-          <div className="pane pane-map" style={{ display: tab === 'map' ? 'block' : 'none' }}>
-            <MapTab
-              state={state}
-              who={who}
-              onWho={setWho}
-              onAdd={(pin: Omit<Pin, 'id'>) => run(addPin(state, pin))}
-              onRemove={(id) => run(removePin(state, id))}
-            />
-          </div>
-
-          <div className="pane pane-house" style={{ display: tab === 'house' ? 'block' : 'none' }}>
-            <HouseTab />
-          </div>
-
-          <div className="pane pane-money" style={{ display: tab === 'money' ? 'block' : 'none' }}>
-            <MoneyTab
-              state={state}
-              who={who}
-              onWho={setWho}
-              onAdd={(expense: Omit<Expense, 'id'>) => run(addExpense(state, expense))}
-              onRemove={(id) => run(removeExpense(state, id))}
-            />
+            <div className="pane pane-money" hidden={tab !== 'money'}>
+              <MoneyTab
+                state={state}
+                who={who}
+                onWho={setWho}
+                onAdd={(expense) => run(addExpense(state, expense))}
+                onRemove={(id) => run(removeExpense(state, id))}
+              />
+            </div>
           </div>
         </div>
-      </div>
       </div>
     </>
   )

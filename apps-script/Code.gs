@@ -119,6 +119,21 @@ const buildRecord = (kind, body) => {
   }
 }
 
+/**
+ * Sheets can parse strings it is handed the way it parses typed input, so '14:30' can
+ * come back as a Date and '=1+1' as a formula, neither of which the site can show.
+ * Formatting the text cells as plain text before the write keeps them literal.
+ * The numeric columns keep their format so amounts and scores still add up in the sheet.
+ */
+const appendRecord = (kind, sheet, record) => {
+  const headers = TABS[kind].headers
+  const row = sheet.getLastRow() + 1
+  headers.forEach((header, i) => {
+    if (NUMERIC.indexOf(header) < 0) sheet.getRange(row, i + 1).setNumberFormat('@')
+  })
+  sheet.getRange(row, 1, 1, headers.length).setValues([headers.map((header) => record[header])])
+}
+
 const isValid = (kind, record) => {
   if (kind === 'pin') return record.name && isFinite(record.lat) && isFinite(record.lng)
   if (kind === 'suggestion') return record.text && isFinite(record.dayId)
@@ -160,7 +175,7 @@ const doPost = (e) => {
         if (kind !== 'planVote') return json({ ok: false, error: 'not found' })
         const record = buildRecord(kind, body)
         if (!isValid(kind, record)) return json({ ok: false, error: 'missing required fields' })
-        sheet.appendRow(TABS[kind].headers.map((header) => record[header]))
+        appendRecord(kind, sheet, record)
         row = sheet.getLastRow()
       }
 
@@ -171,7 +186,7 @@ const doPost = (e) => {
 
     const record = buildRecord(kind, body)
     if (!isValid(kind, record)) return json({ ok: false, error: 'missing required fields' })
-    sheet.appendRow(TABS[kind].headers.map((header) => record[header]))
+    appendRecord(kind, sheet, record)
     return json(snapshot())
   } catch (err) {
     return json({ ok: false, error: String(err) })

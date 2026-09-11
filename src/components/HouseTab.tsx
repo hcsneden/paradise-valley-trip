@@ -1,8 +1,9 @@
-import { useState, type CSSProperties } from 'react'
+import { useState } from 'react'
 import { driveTimes, listing, roster, stay, trip } from '../data/trip'
 
 export const HouseTab = () => {
   const [photo, setPhoto] = useState(0)
+  const count = listing.images.length
 
   return (
     <div className="section-pad">
@@ -11,46 +12,32 @@ export const HouseTab = () => {
         <p>Everything you will look up halfway through the trip.</p>
       </div>
 
-      <div className="card card-wide" style={{ padding: 0, overflow: 'hidden' }}>
+      <div className="card card-wide">
         <div className="shot">
           <img src={listing.images[photo]} alt={`${listing.title}, photo ${photo + 1}`} />
           <button
-            className="x-btn"
-            onClick={() => setPhoto((current) => (current + listing.images.length - 1) % listing.images.length)}
+            className="x-btn shot-nav left"
+            onClick={() => setPhoto((current) => (current + count - 1) % count)}
             aria-label="Previous photo"
-            style={navStyle('left')}
           >
             ‹
           </button>
           <button
-            className="x-btn"
-            onClick={() => setPhoto((current) => (current + 1) % listing.images.length)}
+            className="x-btn shot-nav right"
+            onClick={() => setPhoto((current) => (current + 1) % count)}
             aria-label="Next photo"
-            style={navStyle('right')}
           >
             ›
           </button>
-          <span
-            className="mono"
-            style={{
-              position: 'absolute',
-              right: 10,
-              bottom: 10,
-              background: 'rgba(22,39,14,.72)',
-              color: '#fff',
-              fontSize: 11,
-              padding: '4px 9px',
-              borderRadius: 999,
-            }}
-          >
-            {photo + 1} / {listing.images.length}
+          <span className="mono shot-count">
+            {photo + 1} / {count}
           </span>
         </div>
 
-        <div style={{ padding: 18 }}>
+        <div className="card-wide-body">
           <span className="badge-booked">BOOKED &amp; PAID</span>
           <h3>{listing.title}</h3>
-          <p style={{ margin: '6px 0 0', font: '400 13.5px/1.5 var(--sans)', color: 'var(--slate)' }}>
+          <p className="card-meta">
             {trip.address} · {listing.guests} guests · {listing.bedrooms} bedrooms · {listing.beds} beds ·{' '}
             {listing.bathrooms} baths
           </p>
@@ -73,10 +60,8 @@ export const HouseTab = () => {
       </div>
 
       <div className="card">
-        <span className="eyebrow" style={{ color: 'var(--muted)' }}>
-          From the front door
-        </span>
-        <div style={{ marginTop: 10 }}>
+        <span className="eyebrow">From the front door</span>
+        <div className="card-list">
           {driveTimes.map((drive) => (
             <div key={drive.label} className="kv">
               <span className="k">{drive.label}</span>
@@ -87,10 +72,8 @@ export const HouseTab = () => {
       </div>
 
       <div className="card">
-        <span className="eyebrow" style={{ color: 'var(--muted)' }}>
-          Who lands when
-        </span>
-        <div style={{ marginTop: 10 }}>
+        <span className="eyebrow">Who lands when</span>
+        <div className="card-list">
           {roster.map((party) => (
             <div key={party.name} className="kv">
               <span className="k">{party.name}</span>
@@ -103,46 +86,17 @@ export const HouseTab = () => {
       </div>
 
       <div className="card dark">
-        <span className="eyebrow" style={{ color: 'var(--on-dark-label)' }}>
-          Mid-October reality check
-        </span>
-        <p style={{ margin: '10px 0 0', font: '400 14px/1.6 var(--sans)', color: 'var(--on-dark-body)' }}>
-          {trip.weatherNote}
-        </p>
+        <span className="eyebrow">Mid-October reality check</span>
+        <p className="card-text">{trip.weatherNote}</p>
       </div>
 
       <div className="card dark">
-        <span className="eyebrow" style={{ color: 'var(--on-dark-label)' }}>
-          Before you leave town
-        </span>
-        <p style={{ margin: '10px 0 0', font: '400 14px/1.6 var(--sans)', color: 'var(--on-dark-body)' }}>
-          {trip.hostNote}
-        </p>
-        <a
-          className="cta"
-          href={trip.guidebook}
-          target="_blank"
-          rel="noreferrer"
-          style={{ marginTop: 14, background: 'var(--field)', color: 'var(--forest)' }}
-        >
+        <span className="eyebrow">Before you leave town</span>
+        <p className="card-text">{trip.hostNote}</p>
+        <a className="cta cta-light" href={trip.guidebook} target="_blank" rel="noreferrer">
           Host guidebook
         </a>
       </div>
     </div>
   )
 }
-
-const navStyle = (side: 'left' | 'right'): CSSProperties => ({
-  position: 'absolute',
-  top: '50%',
-  [side]: 10,
-  transform: 'translateY(-50%)',
-  width: 34,
-  height: 34,
-  borderRadius: 999,
-  background: 'rgba(255,255,255,.92)',
-  color: 'var(--ink)',
-  font: '700 20px var(--sans)',
-  lineHeight: 1,
-  padding: 0,
-})

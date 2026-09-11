@@ -73,6 +73,19 @@ button {
   font-variant-numeric: tabular-nums;
 }
 
+/* Two layout helpers used across the tabs: a vertical list with a gap, and a flex
+   child that takes the remaining width but can still shrink for long text. */
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.grow {
+  flex: 1;
+  min-width: 0;
+}
+
 .header {
   padding: 22px var(--gutter) 16px;
   background: var(--forest);
@@ -217,8 +230,6 @@ button {
 }
 
 .item-row {
-  width: 100%;
-  text-align: left;
   background: var(--paper);
   border: 2px solid var(--ink);
   border-radius: 16px;
@@ -246,7 +257,6 @@ button {
   text-align: left;
   font: inherit;
   color: inherit;
-  cursor: pointer;
 }
 
 .item-time {
@@ -257,12 +267,9 @@ button {
   font-variant-numeric: tabular-nums;
 }
 
-.item-body {
+.item-title {
   flex: 1;
   min-width: 0;
-}
-
-.item-title {
   font: 700 15.5px/1.3 var(--sans);
   color: var(--ink);
 }
@@ -425,7 +432,6 @@ button {
   background: var(--paper);
   color: var(--slate);
   font: 700 9px/1 var(--sans);
-  cursor: pointer;
 }
 
 .vote-arrow.on.up {
@@ -519,6 +525,11 @@ button {
   opacity: 0.55;
 }
 
+.btn-forest.small {
+  padding: 7px 13px;
+  font-size: 12.5px;
+}
+
 .btn-ghost {
   padding: 11px 18px;
   background: transparent;
@@ -543,6 +554,40 @@ button {
 .card h3 {
   margin: 0;
   font: 800 19px/1.25 var(--sans);
+}
+
+.card .eyebrow {
+  color: var(--muted);
+}
+
+.card.dark .eyebrow {
+  color: var(--on-dark-label);
+}
+
+.card-list {
+  margin-top: 10px;
+}
+
+.card-meta {
+  margin: 6px 0 0;
+  font: 400 13.5px/1.5 var(--sans);
+  color: var(--slate);
+}
+
+.card-text {
+  margin: 10px 0 0;
+  font: 400 14px/1.6 var(--sans);
+  color: var(--on-dark-body);
+}
+
+/* The photo bleeds to the card edge; the text below gets the padding back. */
+.card-wide {
+  padding: 0;
+  overflow: hidden;
+}
+
+.card-wide-body {
+  padding: 18px;
 }
 
 .badge-booked {
@@ -595,6 +640,12 @@ button {
   font: 700 14px var(--sans);
   text-align: center;
   text-decoration: none;
+}
+
+.cta-light {
+  margin-top: 14px;
+  background: var(--field);
+  color: var(--forest);
 }
 
 .kv {
@@ -688,6 +739,10 @@ button {
   font-variant-numeric: tabular-nums;
 }
 
+.list-row .amount {
+  font: 800 15px var(--sans);
+}
+
 .status.gets {
   color: var(--available);
 }
@@ -778,6 +833,16 @@ button {
   border-radius: 2px;
 }
 
+.pin-line {
+  display: flex;
+  align-items: flex-start;
+}
+
+.pin-line .x-btn {
+  align-self: center;
+  margin-right: 10px;
+}
+
 .pin-row {
   display: flex;
   align-items: flex-start;
@@ -840,6 +905,15 @@ button {
 .map-form textarea {
   border-radius: 14px;
   resize: vertical;
+}
+
+.map-form-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.map-form-actions .btn-forest {
+  flex: 1;
 }
 
 .hint {
@@ -987,6 +1061,7 @@ button {
 }
 
 .sync-note {
+  margin: 20px var(--gutter) 0;
   padding: 10px 14px;
   border: 2px dashed var(--sage);
   border-radius: 14px;
@@ -1044,6 +1119,38 @@ a:focus-visible {
   height: 100%;
   object-fit: cover;
   display: block;
+}
+
+.shot-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--ink);
+  font: 700 20px/1 var(--sans);
+}
+
+.shot-nav.left {
+  left: 10px;
+}
+
+.shot-nav.right {
+  right: 10px;
+}
+
+.shot-count {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: rgba(22, 39, 14, 0.72);
+  color: #fff;
+  font-size: 11px;
 }
 
 /* Responsive
